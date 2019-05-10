@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <Match>
+    <Or>
+      <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/>
+      <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE"/>
+    </Or>
+  </Match>
+</FindBugsFilter>

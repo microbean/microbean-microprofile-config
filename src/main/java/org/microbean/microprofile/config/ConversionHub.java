@@ -21,10 +21,13 @@ import java.beans.PropertyEditorManager;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -211,8 +214,6 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
    *
    * @return the converted object
    *
-   * @exception NullPointerException if {@code type} is {@code null}
-   *
    * @exception IllegalArgumentException if conversion could not occur
    * for any reason
    *
@@ -222,7 +223,6 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
   @Override
   @SuppressWarnings("unchecked")
   public final <T> T convert(final String value, final Type type) {
-    Objects.requireNonNull(type);
     if (this.closed) {
       throw new IllegalStateException();
     }
@@ -402,9 +402,9 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
             if (returnValue == null) {
               returnValue = getConverterFromStaticMethod(cls, "valueOf", CharSequence.class);
               if (returnValue == null) {
-                returnValue = getConverterFromConstructor(cls, String.class);
+                returnValue = getConverterFromConstructor((Class<T>)cls, String.class);
                 if (returnValue == null) {
-                  returnValue = getConverterFromConstructor(cls, CharSequence.class);
+                  returnValue = getConverterFromConstructor((Class<T>)cls, CharSequence.class);
                   if (returnValue == null) {
                     returnValue = getConverterFromStaticMethod(cls, "parse", String.class);
                     if (returnValue == null) {
@@ -412,7 +412,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
                       if (returnValue == null) {
                         final PropertyEditor editor = PropertyEditorManager.findEditor(cls);
                         if (editor != null) {
-                          returnValue = new PropertyEditorConverter<>(editor);
+                          returnValue = new PropertyEditorConverter<T>(cls, editor);
                         }
                       }
                     }
@@ -449,35 +449,12 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
       method = temp;
     }
     if (method != null && Modifier.isStatic(method.getModifiers()) && methodHostClass.isAssignableFrom(method.getReturnType())) {
-      returnValue = new SerializableConverter<T>() {
-          private static final long serialVersionUID = 1L;
-          @Override
-          public final T convert(final String rawValue) {
-            final T rv;
-            if (rawValue == null) {
-              // Most valueOf(String) methods that the specification
-              // intended this kludgy mechanism to handle do not accept
-              // null as a value.
-              rv = null;
-            } else {
-              T convertedObject = null;
-              try {
-                @SuppressWarnings("unchecked")
-                  final T invocationResult = (T)method.invoke(null, rawValue);
-                convertedObject = invocationResult;
-              } catch (final ReflectiveOperationException reflectiveOperationException) {
-                throw new IllegalArgumentException(reflectiveOperationException.getMessage(), reflectiveOperationException);
-              } finally {
-                rv = convertedObject;
-              }
-            }
-            return rv;
-          }};
+      returnValue = new ExecutableBasedConverter<>(method);
     }
     return returnValue;
   }
 
-  private static final <T> Converter<T> getConverterFromConstructor(Class<?> constructorHostClass, final Class<? extends CharSequence> soleParameterType) {
+  private static final <T> Converter<T> getConverterFromConstructor(Class<T> constructorHostClass, final Class<? extends CharSequence> soleParameterType) {
     Objects.requireNonNull(constructorHostClass);
     Objects.requireNonNull(soleParameterType);
     if (constructorHostClass.isPrimitive()) {
@@ -487,8 +464,8 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
     }
 
     Converter<T> returnValue = null;
-    final Constructor<?> constructor;
-    Constructor<?> temp = null;
+    final Constructor<T> constructor;
+    Constructor<T> temp = null;
     try {
       temp = constructorHostClass.getConstructor(soleParameterType);
     } catch (final NoSuchMethodException noSuchMethodException) {
@@ -497,19 +474,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
       constructor = temp;
     }
     if (constructor != null) {
-      returnValue = new SerializableConverter<T>() {
-          private static final long serialVersionUID = 1L;
-          @Override
-          public final T convert(final String value) {
-            try {
-              @SuppressWarnings("unchecked")
-              final T rv = (T)constructor.newInstance(value);
-              return rv;
-            } catch (final ReflectiveOperationException reflectiveOperationException) {
-              throw new IllegalArgumentException(reflectiveOperationException.getMessage(), reflectiveOperationException);
-            }
-          }
-        };
+      returnValue = new ExecutableBasedConverter<>(constructor);
     }
     return returnValue;
   }
@@ -558,15 +523,115 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
     
   }
 
+  private static final class ExecutableBasedConverter<T> extends SerializableConverter<T> {
+
+    private static final long serialVersionUID = 1L;
+
+    private transient Executable executable;
+
+    private ExecutableBasedConverter(final Method method) {
+      super();
+      this.executable = Objects.requireNonNull(method);
+      if (!Modifier.isStatic(method.getModifiers())) {
+        throw new IllegalArgumentException("method is not static: " + method);
+      }
+    }
+
+    private ExecutableBasedConverter(final Constructor<T> constructor) {
+      super();
+      this.executable = Objects.requireNonNull(constructor);
+    }
+
+    @Override
+    public final T convert(final String rawValue) {
+      final T returnValue;
+      if (rawValue == null) {
+        // Most valueOf(String) methods and constructors that the
+        // specification intended this kludgy mechanism to handle do
+        // not accept null as a value.
+        returnValue = null;
+      } else {
+        T convertedObject = null;
+        try {
+          if (this.executable instanceof Method) {
+            @SuppressWarnings("unchecked")
+            final T invocationResult = (T)((Method)this.executable).invoke(null, rawValue);
+            convertedObject = invocationResult;
+          } else {
+            assert this.executable instanceof Constructor;
+            @SuppressWarnings("unchecked")
+            final T invocationResult = ((Constructor<T>)this.executable).newInstance(rawValue);
+            convertedObject = invocationResult;
+          }
+        } catch (final ReflectiveOperationException reflectiveOperationException) {
+          throw new IllegalArgumentException(reflectiveOperationException.getMessage(), reflectiveOperationException);
+        } finally {
+          returnValue = convertedObject;
+        }
+      }
+      return returnValue;
+    }
+
+    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+      if (in != null) {
+        in.defaultReadObject();
+        final boolean constructor = in.readBoolean();        
+        final Class<?> declaringClass = (Class<?>)in.readObject();
+        assert declaringClass != null;
+        final String methodName;
+        if (constructor) {
+          methodName = null;
+        } else {
+          methodName = in.readUTF();
+          assert methodName != null;
+        }
+        final Class<?>[] parameterTypes = (Class<?>[])in.readObject();
+        assert parameterTypes != null;
+        try {
+          if (constructor) {
+            this.executable = declaringClass.getDeclaredConstructor(parameterTypes);
+          } else {
+            this.executable = declaringClass.getMethod(methodName, parameterTypes);
+          }
+        } catch (final ReflectiveOperationException reflectiveOperationException) {
+          throw new IOException(reflectiveOperationException.getMessage(), reflectiveOperationException);
+        }
+        assert this.executable != null;
+      }
+    }
+
+    private void writeObject(final ObjectOutputStream out) throws IOException {
+      if (out != null) {
+        out.defaultWriteObject();
+        assert this.executable != null;
+        final boolean constructor = this.executable instanceof Constructor;
+        out.writeBoolean(constructor); // true means Constructor
+        out.writeObject(this.executable.getDeclaringClass());
+        if (!constructor) {
+          out.writeUTF(this.executable.getName());
+        }
+        out.writeObject(this.executable.getParameterTypes());
+      }
+    }
+    
+  }
+  
   private static final class PropertyEditorConverter<T> extends SerializableConverter<T> {
 
     private static final long serialVersionUID = 1L;
 
-    private final PropertyEditor editor;
+    private final Class<?> conversionClass;
     
-    public PropertyEditorConverter(final PropertyEditor editor) {
+    private transient PropertyEditor editor;
+    
+    private PropertyEditorConverter(final Class<?> conversionClass, final PropertyEditor editor) {
       super();
-      this.editor = editor;
+      this.conversionClass = Objects.requireNonNull(conversionClass);
+      if (editor == null) {
+        this.editor = PropertyEditorManager.findEditor(conversionClass);
+      } else {
+        this.editor = editor;
+      }
     }
 
     @Override
@@ -590,7 +655,14 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
       }
       return returnValue;
     }
-    
+
+    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+      if (in != null) {
+        in.defaultReadObject();
+        this.editor = PropertyEditorManager.findEditor(conversionClass);
+      }
+    }
+
   }
   
 }

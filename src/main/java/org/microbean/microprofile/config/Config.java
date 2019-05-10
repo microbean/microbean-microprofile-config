@@ -80,7 +80,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    *
    * @exception IOException if an error occurs while reading a
    * {@code META-INF/microprofile-config.properties} resource
-   * 
+   *
    * @exception java.util.ServiceConfigurationError if there is a
    * problem interacting with a {@link ServiceLoader}
    */
@@ -176,7 +176,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    */
   @Override
   public final void close() throws IOException {
-    final boolean oldClosed = this.closed;
+    final boolean oldClosed = this.isClosed();
     if (!oldClosed) {
       IOException throwMe = null;
       synchronized (this.sources) {
@@ -211,6 +211,26 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
       this.closed = true;
       ConfigProviderResolver.instance().releaseConfig(this); // XXX re-entrant call, potentially
     }
+  }
+
+  /**
+   * Returns {@code true} if this {@link Config} has been {@linkplain
+   * #close() closed}.
+   *
+   * <p>A closed {@link Config} will throw {@link
+   * IllegalStateException} from most of its methods.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for use by multiple threads.</p>
+   *
+   * @return {@code true} if this {@link Config} has been {@linkplain
+   * #close() closed}; {@code false} otherwise
+   *
+   * @see #close()
+   */
+  public final boolean isClosed() {
+    return this.closed;
   }
 
   /**
@@ -251,7 +271,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    */
   @Override
   public final Iterable<ConfigSource> getConfigSources() {
-    if (this.closed) {
+    if (this.isClosed()) {
       throw new IllegalStateException();
     }
     final Iterable<ConfigSource> returnValue;
@@ -378,7 +398,11 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    * @exception IllegalStateException if this {@link Config} has been
    * {@linkplain #close() closed}
    *
+   * @see #getOptionalValue(String, Type)
+   *
    * @see #getValue(String, Class)
+   *
+   * @see #getValue(String, Type)
    *
    * @see ConfigSource#getValue(String)
    *
@@ -388,6 +412,57 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    */
   @Override
   public final <T> Optional<T> getOptionalValue(final String name, final Class<T> type) {
+    return this.getOptionalValue(name, (Type)type);
+  }
+
+  /**
+   * Returns an {@link Optional} representing an optional
+   * configuration property value for the supplied {@code name}, as
+   * converted to an object of the supplied {@code type}.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * <p>This method does not cache the value it returns.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for use by multiple threads.</p>
+   *
+   * @param <T> the type of the value being requested
+   *
+   * @param name the name of the configuration property whose
+   * converted value should be returned; may be {@code null}; passed
+   * unaltered to {@link ConfigSource#getValue(String)} so subject to
+   * that method's (unspecified) preconditions
+   *
+   * @param type the {@link Type} representing the type any
+   * non-{@code null} value should be converted to if possible; must
+   * not be {@code null}
+   *
+   * @return an {@link Optional} representing an optional
+   * configuration property value for the supplied {@code name}, as
+   * converted to an object of the supplied {@code type}; never {@code
+   * null}
+   *
+   * @exception IllegalArgumentException if the value could not be
+   * converted to the requested type
+   *
+   * @exception IllegalStateException if this {@link Config} has been
+   * {@linkplain #close() closed}
+   *
+   * @see #getOptionalValue(String, Class)
+   *
+   * @see #getValue(String, Class)
+   *
+   * @see #getValue(String, Type)
+   *
+   * @see ConfigSource#getValue(String)
+   *
+   * @see TypeConverter#convert(String, Type)
+   *
+   * @see Converter#convert(String)
+   */
+  public final <T> Optional<T> getOptionalValue(final String name, final Type type) {
     Objects.requireNonNull(type);
     Optional<T> returnValue = null;
     final Iterable<ConfigSource> configSources = this.getConfigSources();
@@ -396,7 +471,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
         if (configSource != null) {
           final String value = configSource.getValue(name);
           if (value != null) {
-            returnValue = Optional.of(this.typeConverter.convert(value, type));
+            returnValue = Optional.of(this.convert(value, type));
             assert returnValue != null;
             if (returnValue.isPresent()) {
               break;
@@ -447,6 +522,8 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    *
    * <p>This method is safe for use by multiple threads.</p>
    *
+   * @param <T> the type of the values returned by this method
+   *
    * @param name the name of the configuration property whose value
    * should be returned; may be {@code null}; passed unaltered to
    * {@link ConfigSource#getValue(String)} so subject to that method's
@@ -465,9 +542,70 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    * {@linkplain #close() closed}
    *
    * @see ConfigSource#getValue(String)
+   *
+   * @see #getValue(String, Type)
+   *
+   * @see #getOptionalValue(String, Class)
+   *
+   * @see #getOptionalValue(String, Type)
    */
   @Override
   public final <T> T getValue(final String name, final Class<T> type) {
+    return this.getValue(name, (Type)type);
+  }
+
+  /**
+   * Returns the value for the configuration property named by the
+   * supplied {@code name}, as converted to an object of the supplied
+   * {@code type}.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * <p>This method does not cache the value it returns.</p>
+   *
+   * <p>It is also worth noting that the MicroProfile Config
+   * specification does not say anything about whether {@link
+   * Converter}s are allowed to attempt to "convert" {@code null}
+   * values from {@link ConfigSource#getValue(String)} invocations
+   * into non-{@code null} objects.  The <a
+   * href="https://github.com/eclipse/microprofile-config/tree/master/tck"
+   * target="_parent">MicroProfile Config TCK</a> will fail if {@link
+   * Converter}s _do_ attempt to work on {@code null} values, so this
+   * implementation never uses a {@code null} value for
+   * conversion.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for use by multiple threads.</p>
+   *
+   * @param <T> the type of the values returned by this method
+   *
+   * @param name the name of the configuration property whose value
+   * should be returned; may be {@code null}; passed unaltered to
+   * {@link ConfigSource#getValue(String)} so subject to that method's
+   * (unspecified) preconditions
+   *
+   * @param type the {@link Type} representing the type any
+   * non-{@code null} value should be converted to if possible; must
+   * not be {@code null}
+   *
+   * @return the converted value; never {@code null}
+   *
+   * @exception NoSuchElementException if the requested configuration
+   * property value does not exist
+   *
+   * @exception IllegalStateException if this {@link Config} has been
+   * {@linkplain #close() closed}
+   *
+   * @see ConfigSource#getValue(String)
+   *
+   * @see #getValue(String, Class)
+   *
+   * @see #getOptionalValue(String, Class)
+   *
+   * @see #getOptionalValue(String, Type)
+   */
+  public final <T> T getValue(final String name, final Type type) {
     Objects.requireNonNull(type);
     T returnValue = null;
     final Iterable<ConfigSource> configSources = this.getConfigSources();
@@ -476,7 +614,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
         if (configSource != null) {
           final String value = configSource.getValue(name);
           if (value != null) {
-            returnValue = this.typeConverter.convert(value, type);
+            returnValue = this.convert(value, type);
             if (returnValue != null) {
               break;
             }
@@ -523,7 +661,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    */
   @Override
   public final <T> T convert(final String rawValue, final Type type) {
-    if (this.closed) {
+    if (this.isClosed()) {
       throw new IllegalStateException();
     }
     return this.typeConverter.convert(rawValue, type);

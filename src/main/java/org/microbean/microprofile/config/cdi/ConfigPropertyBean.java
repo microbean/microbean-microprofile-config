@@ -127,7 +127,23 @@ final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
   
   @Override
   public final void destroy(final T configurationValue, final CreationalContext<T> creationalContext) {
-    
+    try {
+      if (configurationValue instanceof AutoCloseable) {
+        try {
+          ((AutoCloseable)configurationValue).close();
+        } catch (final InterruptedException interruptedException) {
+          Thread.currentThread().interrupt();
+        } catch (final RuntimeException throwMe) {
+          throw throwMe;
+        } catch (final Exception exception) {
+          throw new RuntimeException(exception.getMessage(), exception);
+        }
+      }
+    } finally {
+      if (creationalContext != null) {
+        creationalContext.release();
+      }
+    }
   }
   
   @Override
@@ -227,7 +243,7 @@ final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
     return returnValue;
   }
   
-  private static class ConfigPropertyLiteral extends AnnotationLiteral<ConfigProperty> implements ConfigProperty {
+  private static final class ConfigPropertyLiteral extends AnnotationLiteral<ConfigProperty> implements ConfigProperty {
 
     private static final long serialVersionUID = 1L;
 
@@ -256,50 +272,38 @@ final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
     }
 
     @Override
-    public Type getType() {
+    public final Type getType() {
       return this.type;
     }
 
     @Override
-    public Set<Annotation> getQualifiers() {
+    public final Set<Annotation> getQualifiers() {
       return Collections.singleton(DefaultLiteral.INSTANCE);
     }
 
     @Override
-    public Bean<?> getBean() {
+    public final Bean<?> getBean() {
       return null;
     }
 
     @Override
-    public Member getMember() {
+    public final Member getMember() {
       return null;
     }
 
     @Override
-    public Annotated getAnnotated() {
+    public final Annotated getAnnotated() {
       return null;
     }
 
     @Override
-    public boolean isDelegate() {
+    public final boolean isDelegate() {
       return false;
     }
 
     @Override
-    public boolean isTransient() {
+    public final boolean isTransient() {
       return false;
-    }
-    
-  }
-
-  private static final class DefaultLiteral extends AnnotationLiteral<Default> implements Default {
-
-    private static final long serialVersionUID = 1L;
-    
-    private static final Default INSTANCE = new DefaultLiteral();
-
-    private DefaultLiteral() {
-      super();
     }
     
   }

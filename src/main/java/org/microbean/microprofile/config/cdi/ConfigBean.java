@@ -86,11 +86,14 @@ final class ConfigBean implements Bean<Config>, PassivationCapable {
 
   @Override
   public void destroy(final Config config, final CreationalContext<Config> cc) {
-    if (config != null) {
-      ConfigProviderResolver.instance().releaseConfig(config);
-    }
-    if (cc != null) {
-      cc.release();
+    try {
+      if (config != null) {
+        ConfigProviderResolver.instance().releaseConfig(config);
+      }
+    } finally {
+      if (cc != null) {
+        cc.release();
+      }
     }
   }
 

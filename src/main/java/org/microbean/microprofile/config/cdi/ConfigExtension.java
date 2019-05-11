@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018 microBean.
+ * Copyright © 2018­2019 microBean.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -243,13 +243,6 @@ public final class ConfigExtension implements Extension {
       }
     }
     this.configPropertyInjectionPoints.clear();
-  }
-
-  private static final void onShutdown(@Observes @Destroyed(ApplicationScoped.class) final Object event) throws Exception {
-    final ConfigProviderResolver configProviderResolver = ConfigProviderResolver.instance();
-    if (configProviderResolver instanceof AutoCloseable) {
-      ((AutoCloseable)configProviderResolver).close();
-    }
   }
 
   private static final boolean noBeans(final BeanManager beanManager, final Type type, final Set<Annotation> qualifiers) {

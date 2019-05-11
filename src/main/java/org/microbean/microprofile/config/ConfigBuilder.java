@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018–­2019 microBean.
+ * Copyright © 2018­2019 microBean.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
  */
 package org.microbean.microprofile.config;
 
+import java.lang.ref.WeakReference;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -26,6 +28,9 @@ import java.lang.reflect.Type;
 import java.net.URL;
 
 import java.nio.charset.StandardCharsets;
+
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -54,13 +59,13 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
 
   private final Collection<ConfigSource> sources;
 
-  private volatile ClassLoader classLoader;
+  private volatile WeakReference<ClassLoader> classLoader;
   
   ConfigBuilder() {
     super();
     this.converters = new LinkedList<>();
     this.sources = new LinkedList<>();
-    this.classLoader = Thread.currentThread().getContextClassLoader();
+    this.classLoader = new WeakReference<>(AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader()));
   }
 
   @Override
@@ -96,12 +101,18 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
       assert defaultConfigSources != null;
       sources.addAll(defaultConfigSources);
     }
+
+    ClassLoader classLoader = null;
     
     if (this.addDiscoveredSources) {
+      classLoader = this.classLoader.get();
+      if (classLoader == null) {
+        throw new IllegalStateException();
+      }
       if (sources == null) {
         sources = new LinkedList<>();
       }
-      sources.addAll(org.microbean.microprofile.config.Config.getDiscoveredConfigSources(this.classLoader));
+      sources.addAll(org.microbean.microprofile.config.Config.getDiscoveredConfigSources(classLoader));
     }
     
     if (sources != null) {
@@ -113,7 +124,13 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
     
     final Map<Type, Converter<?>> converters = new HashMap<>();
     if (this.addDiscoveredConverters) {
-      converters.putAll(ConversionHub.getDiscoveredConverters(this.classLoader));
+      if (classLoader == null) {
+        classLoader = this.classLoader.get();
+        if (classLoader == null) {
+          throw new IllegalStateException();
+        }
+      }
+      converters.putAll(ConversionHub.getDiscoveredConverters(classLoader));
     }
     
     synchronized (this.converters) {
@@ -140,41 +157,6 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
     }    
     
     return new org.microbean.microprofile.config.Config(sources, new ConversionHub(converters));
-  }
-
-  private final Collection<? extends ConfigSource> getMicroprofileConfigPropertiesSources() throws IOException {
-    // The specification says nothing about concurrency so we do a
-    // volatile read here.
-    ClassLoader classLoader = this.classLoader;
-    if (classLoader == null) {
-      classLoader = Thread.currentThread().getContextClassLoader();
-    }
-    assert classLoader != null;
-    final Enumeration<? extends URL> urls = classLoader.getResources("/META-INF/microprofile-config.properties");
-    Collection<ConfigSource> returnValue = new ArrayList<>();
-    if (urls != null) {
-      while (urls.hasMoreElements()) {
-        final URL url = urls.nextElement();
-        if (url != null) {
-          final Properties properties = new Properties();
-          // The specification does not mandate a character set for
-          // the /META-INF/microprofile-config.properties, nor whether
-          // it should be in java.util.Properties format.  We'll
-          // assume ISO-8859-1 and java.util.Properties format.
-          try (final Reader reader = new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.ISO_8859_1))) {
-            properties.load(reader);
-          }
-          // The specification provides no guidance on ConfigSource naming.
-          returnValue.add(new PropertiesConfigSource(properties, url.toString()));
-        }
-      }
-    }
-    if (returnValue.isEmpty()) {
-      returnValue = Collections.emptySet();
-    } else {
-      returnValue = Collections.unmodifiableCollection(returnValue);
-    }
-    return returnValue;
   }
 
   @Override
@@ -223,8 +205,11 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
   }
 
   @Override
-  public final ConfigBuilder forClassLoader(final ClassLoader classLoader) {
-    this.classLoader = classLoader;
+  public final ConfigBuilder forClassLoader(ClassLoader classLoader) {
+    if (classLoader == null) {
+      classLoader = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader());
+    }
+    this.classLoader = new WeakReference<>(classLoader);
     return this;
   }
 

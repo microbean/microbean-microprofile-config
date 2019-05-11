@@ -16,6 +16,8 @@
  */
 package org.microbean.microprofile.config.cdi;
 
+import java.io.IOException;
+
 import java.lang.annotation.Annotation;
 
 import java.lang.reflect.Type;
@@ -29,20 +31,32 @@ import javax.enterprise.context.Dependent;
 import javax.enterprise.context.spi.CreationalContext;
 
 import javax.enterprise.inject.Any;
+import javax.enterprise.inject.CreationException;
 import javax.enterprise.inject.Default;
 
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.InjectionPoint;
+import javax.enterprise.inject.spi.PassivationCapable;
 
 import javax.enterprise.util.AnnotationLiteral;
+
+import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 
 import org.eclipse.microprofile.config.spi.ConfigProviderResolver;
 
-final class ConfigBean implements Bean<Config> {
+final class ConfigBean implements Bean<Config>, PassivationCapable {
 
+  private static final Set<InjectionPoint> emptyInjectionPointSet = Collections.emptySet();
+
+  private static final Set<Class<? extends Annotation>> emptyStereotypesSet = Collections.emptySet();
+
+  private static final Set<Type> configTypes = Collections.singleton(Config.class);
+  
+  private final String id;
+  
   private final Set<Annotation> qualifiers;
 
   ConfigBean() {
@@ -51,42 +65,53 @@ final class ConfigBean implements Bean<Config> {
   
   ConfigBean(final Set<Annotation> qualifiers) {
     super();
+    final Set<Annotation> myQualifiers;
     if (qualifiers == null || qualifiers.isEmpty()) {
-      this.qualifiers = new HashSet<>();
+      myQualifiers = new HashSet<>();
     } else {
-      this.qualifiers = new HashSet<>(qualifiers);
+      myQualifiers = new HashSet<>(qualifiers);
     }
-    this.qualifiers.add(DefaultLiteral.INSTANCE);
-    this.qualifiers.add(AnyLiteral.INSTANCE);
+    myQualifiers.add(DefaultLiteral.INSTANCE);
+    myQualifiers.add(AnyLiteral.INSTANCE);    
+    this.qualifiers = Collections.unmodifiableSet(myQualifiers);
+    this.id = new StringBuilder(this.getClass().getName()).append(";t:").append(this.getTypes()).append(";q:").append(this.getQualifiers()).toString();
   }
 
   @Override
-  public Config create(final CreationalContext<Config> cc) {
-    return ConfigProvider.getConfig(Thread.currentThread().getContextClassLoader());
+  public final Config create(final CreationalContext<Config> cc) {
+    final Config config = ConfigProvider.getConfig();
+    assert config != null;
+    return config;
   }
 
   @Override
   public void destroy(final Config config, final CreationalContext<Config> cc) {
     if (config != null) {
-      final ConfigProviderResolver configProviderResolver = ConfigProviderResolver.instance();
-      assert configProviderResolver != null;
-      configProviderResolver.releaseConfig(config);
+      ConfigProviderResolver.instance().releaseConfig(config);
+    }
+    if (cc != null) {
+      cc.release();
     }
   }
 
   @Override
-  public Class<?> getBeanClass() {
+  public final Class<?> getBeanClass() {
     return ConfigBean.class;
   }
 
   @Override
-  public Set<InjectionPoint> getInjectionPoints() {
-    return Collections.emptySet();
+  public final String getId() {
+    return this.id;
+  }
+
+  @Override
+  public final Set<InjectionPoint> getInjectionPoints() {
+    return emptyInjectionPointSet;
   }
 
   @Override
   public final String getName() {
-    return null;
+    return "config";
   }
 
   @Override
@@ -96,17 +121,43 @@ final class ConfigBean implements Bean<Config> {
 
   @Override
   public final Class<? extends Annotation> getScope() {
-    return Dependent.class;
+    // Note: do not get clever and try to change this to
+    // ApplicationScoped.  MicroProfile Config-mandated validation of
+    // injection points will fail in ConfigExtension because at the
+    // time of specification-mandated validation the
+    // ApplicationContext is not active yet, whereas DependentContext
+    // and SingletonContext are, so you can't call
+    // beanManager.getInjectableReference(Config.class).
+    //
+    // You also don't want to change this to Dependent.class, the
+    // naive approach, because you then end up in a situation where
+    // you don't want to destroy the instance ever, but if you do
+    // that, then you leak Config instances.
+    //
+    // The worst case scenario with Singleton.class is that everything
+    // works properly until someone decides to call
+    // ConfigProviderResolver.instance().releaseConfig(ourInstance)
+    // for some reason.  This will close the Config (if it implements
+    // AutoCloseable, as ours does, so as to honor the other seemingly
+    // contradictory part of the specification which says all
+    // ConfigSources and Converters must be closed if possible) but
+    // any references to that Config will be effectively unusable
+    // since it will be (irrevocably) closed.  That may be
+    // unavoidable.
+    //
+    // These are all inherent flaws within the specification and the
+    // least evil tradeoff was made here.
+    return Singleton.class;
   }
 
   @Override
   public final Set<Class<? extends Annotation>> getStereotypes() {
-    return Collections.emptySet();
+    return emptyStereotypesSet;
   }
 
   @Override
   public final Set<Type> getTypes() {
-    return Collections.singleton(Config.class);
+    return configTypes;
   }
 
   @Override
@@ -120,10 +171,8 @@ final class ConfigBean implements Bean<Config> {
   }
 
   @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder(this.getClass().getName());
-    sb.append(" ").append(this.getQualifiers());
-    return sb.toString();
+  public final String toString() {
+    return new StringBuilder(this.getClass().getName()).append(" ").append(this.getQualifiers()).toString();
   }
 
 }

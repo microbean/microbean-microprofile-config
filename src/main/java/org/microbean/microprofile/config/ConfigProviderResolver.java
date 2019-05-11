@@ -16,6 +16,9 @@
  */
 package org.microbean.microprofile.config;
 
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -25,7 +28,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider; // for javadoc only
@@ -46,18 +52,24 @@ import org.eclipse.microprofile.config.ConfigProvider; // for javadoc only
 public final class ConfigProviderResolver extends org.eclipse.microprofile.config.spi.ConfigProviderResolver implements AutoCloseable {
 
   // @GuardedBy("self")
-  private final Map<ClassLoader, Config> configMap;
+  private final WeakHashMap<ClassLoader, WeakAutoCloseableReference<ClassLoader, Config>> configMap;
 
+  private final ReferenceQueue<? super ClassLoader> autoClosingReferenceQueue;
+  
   /**
    * Creates a new {@link ConfigProviderResolver}.
    */
   public ConfigProviderResolver() {
     super();
-    this.configMap = new HashMap<>();
+    this.configMap = new WeakHashMap<>();
+    this.autoClosingReferenceQueue = new ReferenceQueue<>();
+    final Thread cleaner = new AutoCloseableCloserThread(this.autoClosingReferenceQueue);
+    cleaner.start();
   }
 
   /**
-   * Closes this {@link ConfigProviderResolver} using a best-effort strategy.
+   * Closes this {@link ConfigProviderResolver} using a best-effort
+   * strategy.
    *
    * <p>This method attempts to {@linkplain #releaseConfig(Config)
    * release} each of the {@link AutoCloseable} {@link Config}
@@ -81,29 +93,35 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
   public final void close() {
     synchronized (this.configMap) {
       if (!this.configMap.isEmpty()) {
-        RuntimeException throwMe = null;
-        final Collection<Config> configs = new HashSet<>(this.configMap.values());
-        assert configs != null;
-        assert !configs.isEmpty();
-        for (final Config config : configs) {
-          try {
-            this.releaseConfig(config);
-          } catch (final RuntimeException runtimeException) {
-            if (throwMe == null) {
-              throwMe = runtimeException;
-            } else {
-              throwMe.addSuppressed(runtimeException);
-            }
-          } catch (final Exception exception) {
-            if (throwMe == null) {
-              throwMe = new RuntimeException(exception);
-            } else {
-              throwMe.addSuppressed(exception);
+        // Remember that configMap can technically be shrinking all
+        // the time, even with the lock held.
+        final Collection<? extends WeakAutoCloseableReference<?, ? extends Config>> configsSnapshot = new HashSet<>(this.configMap.values());
+        if (!configsSnapshot.isEmpty()) {
+          RuntimeException throwMe = null;
+          for (final WeakAutoCloseableReference<?, ? extends Config> weakConfigReference : configsSnapshot) {
+            assert weakConfigReference != null;
+            final Config config = weakConfigReference.getPotentialAutoCloseable();
+            if (config != null) {
+              try {
+                this.releaseConfig(config);
+              } catch (final RuntimeException runtimeException) {
+                if (throwMe == null) {
+                  throwMe = runtimeException;
+                } else {
+                  throwMe.addSuppressed(runtimeException);
+                }
+              } catch (final Exception exception) {
+                if (throwMe == null) {
+                  throwMe = new RuntimeException(exception);
+                } else {
+                  throwMe.addSuppressed(exception);
+                }
+              }
             }
           }
-        }
-        if (throwMe != null) {
-          throw throwMe;
+          if (throwMe != null) {
+            throw throwMe;
+          }
         }
       }
     }
@@ -191,7 +209,10 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
     }
     Config returnValue = null;
     synchronized (this.configMap) {
-      returnValue = configMap.get(classLoader);
+      final WeakAutoCloseableReference<?, ? extends Config> configReference = this.configMap.get(classLoader);
+      if (configReference != null) {
+        returnValue = configReference.getPotentialAutoCloseable();
+      }
       if (returnValue == null) {
         returnValue = this.getBuilder()
           .addDefaultSources()
@@ -245,22 +266,36 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
       if (classLoader == null) {
         classLoader = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader());
       }
+      final WeakAutoCloseableReference<ClassLoader, Config> configReference = new WeakAutoCloseableReference<>(classLoader, config, this.autoClosingReferenceQueue);
       synchronized (this.configMap) {
-        final Config oldConfig = this.configMap.putIfAbsent(classLoader, config);
-        if (oldConfig != null) {          
-          // The specification says that an IllegalStateException
-          // should be thrown "if there is already a Config registered
-          // within the Application."  It is not entirely clear what
-          // "within the Application" means.
-          throw new IllegalStateException("configMap.containsKey(" + classLoader + "): " + oldConfig);
+        final WeakAutoCloseableReference<?, ? extends Config> oldConfigReference = this.configMap.putIfAbsent(classLoader, configReference);
+        if (oldConfigReference != null) {
+          final Config oldConfig = oldConfigReference.getPotentialAutoCloseable();
+          if (oldConfig != null) {
+            // The specification says that an IllegalStateException
+            // should be thrown "if there is already a Config registered
+            // within the Application."  It is not entirely clear what
+            // "within the Application" means.  We do the best we can
+            // here.
+            throw new IllegalStateException("configMap.containsKey(" + classLoader + "): " + oldConfig);
+          }
         }
       }
     }
   }
 
   /**
-   * Releases all {@link Config} instances associated in any way with
-   * the supplied {@link ClassLoader}.
+   * Releases the supplied {@link Config} by {@linkplain
+   * AutoCloseable#close() closing} it if it implements {@link
+   * AutoCloseable} and atomically removes all of its {@linkplain
+   * #registerConfig(Config, ClassLoader) registrations}.
+   *
+   * <p>An {@link AutoCloseable} {@link Config} implementation
+   * released by this method becomes effectively unusable by design
+   * after this method completes.</p>
+   *
+   * <p>In general, owing to the underspecified nature of this method,
+   * end users should probably not call it directly.</p>
    *
    * <h2>Thread Safety</h2>
    *
@@ -299,6 +334,12 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
    * cases, but a call to this {@link #releaseConfig(Config)} method
    * will remove both such registrations if present.</p>
    *
+   * <p>The specification has no guidance on what to do if a {@link
+   * Config} is released, and then another one is acquired via {@link
+   * ConfigProvider#getConfig(ClassLoader)}, if anything.  This
+   * implementation does not track {@link Config} instances once they
+   * have been released.</p>
+   *
    * <p>The specification does not indicate whether the supplied
    * {@link Config} must be non-{@code null}.  This implementation
    * consequently accepts {@code null} {@link Config}s and does
@@ -320,31 +361,51 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
       RuntimeException throwMe = null;
       synchronized (this.configMap) {
         if (!this.configMap.isEmpty()) {
-          final Set<? extends Entry<?, ? extends Config>> entrySet = this.configMap.entrySet();
-          assert entrySet != null;
-          assert !entrySet.isEmpty();
-          final Iterator<? extends Entry<?, ? extends Config>> entryIterator = entrySet.iterator();
-          assert entryIterator != null;
-          while (entryIterator.hasNext()) {
-            final Entry<?, ? extends Config> entry = entryIterator.next();
-            if (entry != null) {
-              final Config existingConfig = entry.getValue();
-              if (config.equals(existingConfig)) {
-                entryIterator.remove();
-                if (existingConfig instanceof AutoCloseable) {
-                  try {
-                    ((AutoCloseable)existingConfig).close();
-                  } catch (final RuntimeException runtimeException) {
-                    if (throwMe == null) {
-                      throwMe = runtimeException;
-                    } else {
-                      throwMe.addSuppressed(runtimeException);
-                    }
-                  } catch (final Exception exception) {
-                    if (throwMe == null) {
-                      throwMe = new RuntimeException(exception.getMessage(), exception);
-                    } else {
-                      throwMe.addSuppressed(exception);
+          final Collection<? extends Entry<?, ? extends WeakAutoCloseableReference<?, ? extends Config>>> entrySet = this.configMap.entrySet();
+          if (entrySet != null && !entrySet.isEmpty()) {
+            final Iterator<? extends Entry<?, ? extends WeakAutoCloseableReference<?, ? extends Config>>> entryIterator = entrySet.iterator();
+            if (entryIterator != null) {
+              while (entryIterator.hasNext()) {
+                Entry<?, ? extends WeakAutoCloseableReference<?, ? extends Config>> entry = null;
+                try {
+                  entry = entryIterator.next();
+                } catch (final NoSuchElementException noSuchElementException) {
+                  // This can happen because we're working with a
+                  // WeakHashMap.
+                }
+                if (entry != null) {
+                  final WeakAutoCloseableReference<?, ? extends Config> configReference = entry.getValue();
+                  if (configReference != null) {
+                    final Config existingConfig = configReference.getPotentialAutoCloseable();
+                    if (config.equals(existingConfig)) {
+                      try {
+                        entryIterator.remove();
+                      } catch (final RuntimeException runtimeException) {
+                        if (throwMe == null) {
+                          throwMe = runtimeException;
+                        } else {
+                          throwMe.addSuppressed(runtimeException);
+                        }
+                      }
+                      if (existingConfig instanceof AutoCloseable) {
+                        try {
+                          ((AutoCloseable)existingConfig).close();
+                        } catch (final RuntimeException runtimeException) {
+                          if (throwMe == null) {
+                            throwMe = runtimeException;
+                          } else {
+                            throwMe.addSuppressed(runtimeException);
+                          }
+                        } catch (final InterruptedException interruptedException) {
+                          Thread.currentThread().interrupt();
+                        } catch (final Exception exception) {
+                          if (throwMe == null) {
+                            throwMe = new RuntimeException(exception.getMessage(), exception);
+                          } else {
+                            throwMe.addSuppressed(exception);
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -357,6 +418,69 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
         throw throwMe;
       }
     }
+  }
+
+  private static final class WeakAutoCloseableReference<R, A> extends WeakReference<R> implements AutoCloseable {
+
+    private final A potentialAutoCloseable;
+    
+    private WeakAutoCloseableReference(final R referent,
+                                       final A potentialAutoCloseable,
+                                       final ReferenceQueue<? super R> referenceQueue) {
+      super(referent, Objects.requireNonNull(referenceQueue));
+      this.potentialAutoCloseable = potentialAutoCloseable;
+    }
+
+    private final A getPotentialAutoCloseable() {
+      return this.potentialAutoCloseable;
+    }
+    
+    @Override
+    public final void close() throws Exception {
+      final A potentialAutoCloseable = this.getPotentialAutoCloseable();
+      if (potentialAutoCloseable instanceof AutoCloseable) {
+        ((AutoCloseable)potentialAutoCloseable).close();
+      }
+    }
+    
+  }
+
+  private static final class AutoCloseableCloserThread extends Thread {
+
+    private final ReferenceQueue<?> referenceQueue;
+    
+    private AutoCloseableCloserThread(final ReferenceQueue<?> referenceQueue) {
+      super(AutoCloseableCloserThread.class.getName());
+      this.setDaemon(true);
+      this.referenceQueue = Objects.requireNonNull(referenceQueue);
+    }
+
+    @Override
+    public final void run() {
+      while (!this.isInterrupted()) {
+        try {
+          final Object reference = this.referenceQueue.remove();
+          if (reference instanceof AutoCloseable) {
+            try {
+              ((AutoCloseable)reference).close();
+            } catch (final InterruptedException interruptedException) {
+              this.interrupt();
+            } catch (final RuntimeException throwMe) {
+              throw throwMe;
+            } catch (final Exception exception) {
+              throw new RuntimeException(exception.getMessage(), exception);
+            }
+          }
+        } catch (final InterruptedException interruptedException) {
+          this.interrupt();
+        } catch (final RuntimeException throwMe) {
+          throw throwMe;
+        } catch (final Exception exception) {
+          throw new RuntimeException(exception.getMessage(), exception);
+        }
+      }
+    }
+    
   }
 
 }

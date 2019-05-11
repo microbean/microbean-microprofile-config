@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018 microBean.
+ * Copyright © 2018­2019 microBean.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.InjectionPoint;
+import javax.enterprise.inject.spi.PassivationCapable;
 
 import javax.enterprise.util.AnnotationLiteral;
 
@@ -48,13 +49,15 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import org.microbean.microprofile.config.TypeConverter;
 
-final class ConfigPropertyBean<T> implements Bean<T> {
+final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
 
   private static final Set<InjectionPoint> emptyInjectionPointSet = Collections.emptySet();
 
   private static final Set<Class<? extends Annotation>> emptyStereotypesSet = Collections.emptySet();
 
   private static final String[] emptyStringArray = new String[0];
+
+  private final String id;
   
   private final Type type;
   
@@ -78,6 +81,7 @@ final class ConfigPropertyBean<T> implements Bean<T> {
       configQualifiers.removeIf(q -> q instanceof ConfigProperty);
       this.configQualifiers = configQualifiers.toArray(new Annotation[configQualifiers.size()]);
     }
+    this.id = new StringBuilder(this.getClass().getName()).append(";t:").append(this.getTypes()).append(";q:").append(this.getQualifiers()).toString();
   }
   
   @Override
@@ -100,6 +104,7 @@ final class ConfigPropertyBean<T> implements Bean<T> {
         configBeans = beans;
       }
     }
+    assert configBeans != null;
     final Config config = (Config)beanManager.getReference(beanManager.resolve(configBeans), Config.class, context);
     assert config != null;
     final String value = getValue(config, currentInjectionPoint);
@@ -171,7 +176,7 @@ final class ConfigPropertyBean<T> implements Bean<T> {
   }
   
   public final String getId() {
-    return null;
+    return this.id;
   }
 
   private static final String getDefaultValue(final InjectionPoint injectionPoint) {

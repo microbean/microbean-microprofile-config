@@ -138,7 +138,7 @@
 <span class="sourceLineNo">130</span>   *<a name="line.130"></a>
 <span class="sourceLineNo">131</span>   * @see org.eclipse.microprofile.config.ConfigProvider#getConfig()<a name="line.131"></a>
 <span class="sourceLineNo">132</span>   */<a name="line.132"></a>
-<span class="sourceLineNo">133</span>  public Config(final Collection&lt;ConfigSource&gt; sources,<a name="line.133"></a>
+<span class="sourceLineNo">133</span>  public Config(final Collection&lt;? extends ConfigSource&gt; sources,<a name="line.133"></a>
 <span class="sourceLineNo">134</span>                final TypeConverter typeConverter) {<a name="line.134"></a>
 <span class="sourceLineNo">135</span>    super();<a name="line.135"></a>
 <span class="sourceLineNo">136</span>    this.typeConverter = Objects.requireNonNull(typeConverter);<a name="line.136"></a>
@@ -280,7 +280,7 @@
 <span class="sourceLineNo">272</span>  @Override<a name="line.272"></a>
 <span class="sourceLineNo">273</span>  public final Iterable&lt;ConfigSource&gt; getConfigSources() {<a name="line.273"></a>
 <span class="sourceLineNo">274</span>    if (this.isClosed()) {<a name="line.274"></a>
-<span class="sourceLineNo">275</span>      throw new IllegalStateException();<a name="line.275"></a>
+<span class="sourceLineNo">275</span>      throw new IllegalStateException("this.isClosed()");<a name="line.275"></a>
 <span class="sourceLineNo">276</span>    }<a name="line.276"></a>
 <span class="sourceLineNo">277</span>    final Iterable&lt;ConfigSource&gt; returnValue;<a name="line.277"></a>
 <span class="sourceLineNo">278</span>    synchronized (this.sources) {<a name="line.278"></a>
@@ -670,7 +670,7 @@
 <span class="sourceLineNo">662</span>  @Override<a name="line.662"></a>
 <span class="sourceLineNo">663</span>  public final &lt;T&gt; T convert(final String rawValue, final Type type) {<a name="line.663"></a>
 <span class="sourceLineNo">664</span>    if (this.isClosed()) {<a name="line.664"></a>
-<span class="sourceLineNo">665</span>      throw new IllegalStateException();<a name="line.665"></a>
+<span class="sourceLineNo">665</span>      throw new IllegalStateException("this.isClosed()");<a name="line.665"></a>
 <span class="sourceLineNo">666</span>    }<a name="line.666"></a>
 <span class="sourceLineNo">667</span>    return this.typeConverter.convert(rawValue, type);<a name="line.667"></a>
 <span class="sourceLineNo">668</span>  }<a name="line.668"></a>

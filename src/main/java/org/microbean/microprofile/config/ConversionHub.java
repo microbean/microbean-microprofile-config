@@ -73,7 +73,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
   private static final Pattern backslashCommaPattern = Pattern.compile("\\\\,");
 
   private static final Map<Class<?>, Class<?>> wrapperClasses;
-  
+
   static {
     wrapperClasses = new HashMap<>();
     wrapperClasses.put(boolean.class, Boolean.class);
@@ -85,7 +85,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
     wrapperClasses.put(long.class, Long.class);
     wrapperClasses.put(short.class, Short.class);
   }
-  
+
   private final Map<Type, Converter<?>> converters;
 
   private volatile boolean closed;
@@ -98,7 +98,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
     final Map<? extends Type, ? extends Converter<?>> discoveredConverters = getDiscoveredConverters(null);
     this.converters = new HashMap<>(discoveredConverters);
   }
-  
+
   /**
    * Creates a new {@link ConversionHub}.
    *
@@ -134,6 +134,23 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
    * Any {@link IOException} thrown during such an attempt does not
    * abort the closing process.</p>
    *
+   * <p>Once this method has been invoked:</p>
+   *
+   * <ul>
+   *
+   * <li>All future invocations of the {@link #convert(String, Type)}
+   * method will throw an {@link IllegalStateException}</li>
+   *
+   * <li>All future invocations of the {@link #isClosed()} method will
+   * return {@code true}</li>
+   *
+   * </ul>
+   *
+   * <p>{@link ConversionHub} instances are often {@linkplain
+   * Config#Config(Collection, TypeConverter) supplied to
+   * <code>Config</code> instances at construction time}, and so may
+   * be {@linkplain Config#close() closed by them}.</p>
+   *
    * <h2>Thread Safety</h2>
    *
    * <p>This method is safe for concurrent use by multiple
@@ -144,52 +161,76 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
    */
   @Override
   public void close() throws IOException {
-    /*
-      The specification says:
+    if (!this.isClosed()) {
+      /*
+        The specification says:
 
-      "A factory method ConfigProviderResolver#releaseConfig(Config
-      config) to release the Config instance [sic]. This will unbind
-      the current Config from the application. The ConfigSources that
-      implement the java.io.Closeable interface will be properly
-      destroyed. The Converters that implement the java.io.Closeable
-      interface will be properly destroyed."
-      
-      It is not clear which ConfigSources and which Converters are
-      meant here, but assuming they are only those ones present "in"
-      the Config being released, there's no way to "get" those from a
-      given Config, since (a) there is no requirement that a Config
-      actually house Converters and (b) consequently there is nothing
-      like a Config#getConverters() method.
+        "A factory method ConfigProviderResolver#releaseConfig(Config
+        config) to release the Config instance [sic]. This will unbind
+        the current Config from the application. The ConfigSources
+        that implement the java.io.Closeable interface will be
+        properly destroyed. The Converters that implement the
+        java.io.Closeable interface will be properly destroyed."
 
-      So we implement Closeable to at least provide the ability to
-      close everything cleanly and in a thread-safe manner.
-    */
+        It is not clear which ConfigSources and which Converters are
+        meant here, but assuming they are only those ones present "in"
+        the Config being released, there's no way to "get" those from
+        a given Config, since (a) there is no requirement that a
+        Config actually house Converters and (b) consequently there is
+        nothing like a Config#getConverters() method.
 
-    IOException throwMe = null;
-    synchronized (this.converters) {
-      if (!this.converters.isEmpty()) {
-        final Collection<? extends Converter<?>> converters = this.converters.values();
-        assert converters != null;
-        assert !converters.isEmpty();
-        for (final Converter<?> converter : converters) {
-          if (converter instanceof Closeable) {
-            try {
-              ((Closeable)converter).close();
-            } catch (final IOException ioException) {
-              if (throwMe == null) {
-                throwMe = ioException;
-              } else {
-                throwMe.addSuppressed(ioException);
+        So we implement Closeable to at least provide the ability to
+        close everything cleanly and in a thread-safe manner.
+      */
+
+      IOException throwMe = null;
+      synchronized (this.converters) {
+        if (!this.converters.isEmpty()) {
+          final Collection<? extends Converter<?>> converters = this.converters.values();
+          assert converters != null;
+          assert !converters.isEmpty();
+          for (final Converter<?> converter : converters) {
+            if (converter instanceof Closeable) {
+              try {
+                ((Closeable)converter).close();
+              } catch (final IOException ioException) {
+                if (throwMe == null) {
+                  throwMe = ioException;
+                } else {
+                  throwMe.addSuppressed(ioException);
+                }
               }
             }
           }
         }
       }
+      if (throwMe != null) {
+        throw throwMe;
+      }
+      this.closed = true;
     }
-    if (throwMe != null) {
-      throw throwMe;
-    }
-    this.closed = true;
+  }
+
+  /**
+   * Returns {@code true} if this {@link ConversionHub} has been
+   * {@linkplain #close() closed}.
+   *
+   * <p>All invocations of the {@link #convert(String, Type)} method
+   * will always throw an {@link IllegalStateException} once this
+   * {@link ConversionHub} has been {@linkplain #close() closed}.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is idempotent and safe for concurrent use by
+   * multiple threads.</p>
+   *
+   * @return {@code true} if this {@link ConversionHub} has been
+   * {@linkplain #close() closed}; {@code false} otherwise
+   *
+   * @see #close()
+   */
+  public final boolean isClosed() {
+    return this.closed;
   }
 
   /**
@@ -223,8 +264,8 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
   @Override
   @SuppressWarnings("unchecked")
   public final <T> T convert(final String value, final Type type) {
-    if (this.closed) {
-      throw new IllegalStateException();
+    if (this.isClosed()) {
+      throw new IllegalStateException("this.isClosed()");
     }
     Converter<T> converter;
     synchronized (this.converters) {
@@ -244,7 +285,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
       throw new IllegalArgumentException("\"" + value + "\" could not be converted to " + (type == null ? "null" : type.getTypeName()));
     }
     final T returnValue = converter.convert(value);
-    return returnValue;      
+    return returnValue;
   }
 
   @SuppressWarnings("unchecked")
@@ -258,7 +299,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
             return (T)rawValue;
           }
         };
-      
+
     } else if (Boolean.class.equals(conversionType) || boolean.class.equals(conversionType)) {
       returnValue = new SerializableConverter<T>() {
           private static final long serialVersionUID = 1L;
@@ -272,7 +313,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
                                        "1".equals(rawValue)));
           }
         };
-           
+
     } else if (URL.class.equals(conversionType)) {
       returnValue = new SerializableConverter<T>() {
           private static final long serialVersionUID = 1L;
@@ -285,23 +326,26 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
             }
           }
         };
-      
+
     } else if (Class.class.equals(conversionType)) {
       returnValue = new SerializableConverter<T>() {
           private static final long serialVersionUID = 1L;
           @Override
           public final T convert(final String rawValue) {
             try {
-              // Seems odd that the specification mandates the use of the
-              // single-argument Class#forName(String) method, but it's
-              // spelled out in black and white.
+              // Seems odd that the specification mandates the use of
+              // the single-argument Class#forName(String) method, but
+              // it's spelled out in black and white:
+              // https://github.com/eclipse/microprofile-config/blob/20e1d59dd1055867a54e65b77405f9e68611544e/spec/src/main/asciidoc/converters.asciidoc#built-in-converters
+              // See
+              // https://github.com/eclipse/microprofile-config/issues/424.
               return (T)Class.forName(rawValue);
             } catch (final ClassNotFoundException classNotFoundException) {
               throw new IllegalArgumentException(classNotFoundException.getMessage(), classNotFoundException);
             }
           }
         };
-      
+
     } else if (conversionType instanceof ParameterizedType) {
       final ParameterizedType parameterizedType = (ParameterizedType)conversionType;
       final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
@@ -311,7 +355,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
       assert rawType instanceof Class : "!(parameterizedType.getRawType() instanceof Class): " + rawType;
       final Class<?> conversionClass = (Class<?>)rawType;
       assert !conversionClass.isArray();
-      
+
       if (Optional.class.isAssignableFrom(conversionClass)) {
         assert actualTypeArguments.length == 1;
         final Type firstTypeArgument = actualTypeArguments[0];
@@ -322,7 +366,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
               return (T)Optional.ofNullable(ConversionHub.this.convert(rawValue, firstTypeArgument)); // XXX recursive call
             }
           };
-        
+
       } else if (Class.class.isAssignableFrom(conversionClass)) {
         returnValue = new SerializableConverter<T>() {
             private static final long serialVersionUID = 1L;
@@ -331,7 +375,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
               return ConversionHub.this.convert(rawValue, conversionClass); // XXX recursive call
             }
           };
-        
+
       } else if (Collection.class.isAssignableFrom(conversionClass)) {
         returnValue = new SerializableConverter<T>() {
             private static final long serialVersionUID = 1L;
@@ -367,7 +411,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
       } else {
         throw new IllegalArgumentException("Unhandled conversion type: " + conversionType);
       }
-      
+
     } else if (conversionType instanceof Class) {
       final Class<?> conversionClass = (Class<?>)conversionType;
       if (conversionClass.isArray()) {
@@ -385,7 +429,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
               return container;
             }
           };
-        
+
       } else {
         final Class<?> cls;
         if (conversionClass.isPrimitive()) {
@@ -444,7 +488,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
     try {
       temp = methodHostClass.getMethod(methodName, soleParameterType);
     } catch (final NoSuchMethodException noSuchMethodException) {
-      
+
     } finally {
       method = temp;
     }
@@ -520,7 +564,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
     protected SerializableConverter() {
       super();
     }
-    
+
   }
 
   private static final class ExecutableBasedConverter<T> extends SerializableConverter<T> {
@@ -575,7 +619,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
     private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
       if (in != null) {
         in.defaultReadObject();
-        final boolean constructor = in.readBoolean();        
+        final boolean constructor = in.readBoolean();
         final Class<?> declaringClass = (Class<?>)in.readObject();
         assert declaringClass != null;
         final String methodName;
@@ -613,17 +657,17 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
         out.writeObject(this.executable.getParameterTypes());
       }
     }
-    
+
   }
-  
+
   private static final class PropertyEditorConverter<T> extends SerializableConverter<T> {
 
     private static final long serialVersionUID = 1L;
 
     private final Class<?> conversionClass;
-    
+
     private transient PropertyEditor editor;
-    
+
     private PropertyEditorConverter(final Class<?> conversionClass, final PropertyEditor editor) {
       super();
       this.conversionClass = Objects.requireNonNull(conversionClass);
@@ -664,5 +708,5 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
     }
 
   }
-  
+
 }

@@ -130,7 +130,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
    *
    * @see org.eclipse.microprofile.config.ConfigProvider#getConfig()
    */
-  public Config(final Collection<ConfigSource> sources,
+  public Config(final Collection<? extends ConfigSource> sources,
                 final TypeConverter typeConverter) {
     super();
     this.typeConverter = Objects.requireNonNull(typeConverter);
@@ -272,7 +272,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
   @Override
   public final Iterable<ConfigSource> getConfigSources() {
     if (this.isClosed()) {
-      throw new IllegalStateException();
+      throw new IllegalStateException("this.isClosed()");
     }
     final Iterable<ConfigSource> returnValue;
     synchronized (this.sources) {
@@ -662,7 +662,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
   @Override
   public final <T> T convert(final String rawValue, final Type type) {
     if (this.isClosed()) {
-      throw new IllegalStateException();
+      throw new IllegalStateException("this.isClosed()");
     }
     return this.typeConverter.convert(rawValue, type);
   }

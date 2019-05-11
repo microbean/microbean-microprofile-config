@@ -8,7 +8,7 @@
   <parent>
     <groupId>org.microbean</groupId>
     <artifactId>microbean-pluginmanagement-pom</artifactId>
-    <version>10</version>
+    <version>11</version>
     <relativePath />
   </parent>
 
@@ -171,6 +171,11 @@
       <plugins>
 
         <plugin>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.1.1</version>
+        </plugin>
+
+        <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
           <configuration>
             <offlineLinks>
@@ -211,9 +216,6 @@
   </build>
 
   <properties>
-    <ciBadge>${ciUrl}.svg?branch=master</ciBadge>
-    <ciUrl>https://travis-ci.com/microbean/${project.artifactId}</ciUrl>
-    <doctitle>&lt;a href="${project.url}" target="_parent"&gt;&lt;span style="font-family:Lobster, cursive;"&gt;µb&lt;/span&gt; ${project.artifactId}&lt;/a&gt; ${project.version} &lt;a href="${ciUrl}" target="_parent"&gt;&lt;img src="${ciBadge}"&gt;&lt;/a&gt;</doctitle>
     <links>http://docs.jboss.org/cdi/api/1.2/,http://docs.oracle.com/javaee/7/api/</links>
   </properties>
 

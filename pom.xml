@@ -12,7 +12,7 @@
     <relativePath />
   </parent>
 
-  <name>microBean MicroProfile Configuration Implementation</name>
+  <name>microBean&trade; MicroProfile Configuration Implementation</name>
   <description>${project.name}</description>
   <url>http://microbean.github.io/${project.artifactId}</url>
 
@@ -22,6 +22,11 @@
     <url>https://github.com/microbean/${project.artifactId}/</url>
     <tag>HEAD</tag>
   </scm>
+
+  <organization>
+    <name>microBean&trade;</name>
+    <url>http://microbean.systems/</url>
+  </organization>
 
   <dependencyManagement>
     <dependencies>

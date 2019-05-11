@@ -1,4 +1,4 @@
-# microBean MicroProfile Config
+# microBean&trade; MicroProfile Config
 
 [![Build Status](https://travis-ci.com/microbean/microbean-microprofile-config.svg?branch=master)](https://travis-ci.com/microbean/microbean-microprofile-config)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.microbean/microbean-microprofile-config/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.microbean/microbean-microprofile-config)

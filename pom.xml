@@ -222,6 +222,7 @@
 
   <properties>
     <links>http://docs.jboss.org/cdi/api/1.2/,http://docs.oracle.com/javaee/7/api/</links>
+    <stylesheetfile>css/stylesheet.css</stylesheetfile>
   </properties>
 
   <reporting>

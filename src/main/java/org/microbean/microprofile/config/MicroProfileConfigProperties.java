@@ -76,6 +76,10 @@ import org.eclipse.microprofile.config.ConfigProvider;
  *
  * </ul>
  *
+ * <h2>Thread Safety</h2>
+ *
+ * <p>This class is safe for concurrent use by multiple threads.</p>
+ *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
@@ -167,6 +171,28 @@ public class MicroProfileConfigProperties extends Properties {
     this.config = config == null ? ConfigProvider.getConfig() : config;
   }
 
+  /**
+   * Returns {@code true} if this {@link MicroProfileConfigProperties}
+   * {@linkplain Properties#containsKey(Object) directly contains} the
+   * supplied {@code key}, or if the supplied {@code key} is a {@link
+   * String} and is contained in the {@link Set} of configuration
+   * property names returned by the {@link Config#getPropertyNames()}
+   * method.
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @param key the key to seek; may be {@code null}
+   *
+   * @return {@code true} if this {@link MicroProfileConfigProperties}
+   * {@linkplain Properties#containsKey(Object) directly contains} the
+   * supplied {@code key}, or if the supplied {@code key} is a {@link
+   * String} and is contained in the {@link Set} of configuration
+   * property names returned by the {@link Config#getPropertyNames()}
+   * method; {@code false} otherwise
+   */
   @Override
   public synchronized final boolean containsKey(final Object key) {
     boolean returnValue = super.containsKey(key);
@@ -193,11 +219,59 @@ public class MicroProfileConfigProperties extends Properties {
     return returnValue;
   }
 
+  /**
+   * Invokes the {@link #containsValue(Object)} method with the
+   * supplied {@link Object} and returns the result.
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @param value the value to seek; may be {@code null}
+   *
+   * @return {@code true} if the {@link #containsValue(Object)} method
+   * returns {@code true}; {@code false} otherwise
+   *
+   * @see #containsValue(Object)
+   */
   @Override
   public synchronized final boolean contains(final Object value) {
     return this.containsValue(value);
   }
-  
+
+  /**
+   * Returns {@code true} if this {@link MicroProfileConfigProperties}
+   * contains the supplied value {@link Object}.
+   *
+   * <p>First the {@link Properties#containsValue(Object)} method is
+   * invoked with the supplied {@link Object}.  If that returns {@code
+   * true}, then {@code true} is returned.</p>
+   *
+   * <p>Next, {@linkplain Config#getPropertyNames() all known property
+   * names in the <code>Config</code> wrapped by this
+   * <code>MicroProfileConfigProperties</code>} are acquired.  This
+   * set is iterated over and {@link Config#getOptionalValue(String,
+   * Class)} is called for each one.  If the resulting {@link
+   * Optional} {@linkplain Optional#isPresent() is present}, then
+   * {@code true} is returned.</p>
+   *
+   * <p>In all other cases {@code false} is returned.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @param value the value to seek; may be {@code null}
+   *
+   * @return {@code true} if this {@link MicroProfileConfigProperties}
+   * contains the supplied value; {@code false} otherwise
+   *
+   * @see Config#getPropertyNames()
+   *
+   * @see Properties#containsValue(Object)
+   */
   @Override
   public synchronized final boolean containsValue(final Object value) {
     boolean returnValue = super.containsValue(value);
@@ -217,7 +291,40 @@ public class MicroProfileConfigProperties extends Properties {
     }
     return returnValue;
   }
-  
+
+  /**
+   * Returns the value indexed under the supplied {@code key}, or
+   * {@code null} if the value does not exist.  Note that a {@code
+   * null} return value could result from a key's being explicitly
+   * mapped to {@code null}, or from a key's absence.
+   *
+   * <p>This implementation first calls {@link
+   * Properties#containsKey(Object)} with the supplied {@code key}.  If
+   * that method invocation returns {@code true}, then the {@link
+   * Properties#get(Object)} method is invoked and its result is
+   * returned.</p>
+   *
+   * <p>Otherwise, the {@link Config#getOptionalValue(String, Class)}
+   * method is called and its resulting {@link Optional} result
+   * {@linkplain Optional#get() is acquired} and returned, or, if it
+   * is {@linkplain Optional#isPresent() not present}, {@code null} is
+   * returned.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @param key the key of the value to return; may be {@code null}
+   *
+   * @return an appropriate value, or {@code null}
+   *
+   * @see Properties#containsKey(Object)
+   *
+   * @see Properties#get(Object)
+   *
+   * @see Config#getOptionalValue(String, Class)
+   */
   @Override
   public synchronized final Object get(final Object key) {
     final Object returnValue;
@@ -234,10 +341,43 @@ public class MicroProfileConfigProperties extends Properties {
     return returnValue;
   }
 
+  /**
+   * Returns {@code true} if this {@link MicroProfileConfigProperties}
+   * is empty.  In all normal cases, this method will return {@code
+   * false}, since normally {@link Config} instances expose at least
+   * one configuration property value.
+   *
+   * <p>This implementation calls the {@link Properties#isEmpty()}
+   * method.  If that method returns {@code false}, then {@code false}
+   * is returned.</p>
+   *
+   * <p>Otherwise this method calls the {@link
+   * Config#getPropertyNames()} method, calls {@link
+   * Iterable#iterator()} on the resulting {@link Iterable}, and, if
+   * it is non-{@code null}, calls the {@link Iterator#hasNext()}
+   * method on it, returning its result.</p>
+   *
+   * <p>In all other cases this method returns {@code true}.</p>
+   *
+   * <p>This method is a much faster way of checking if this {@link
+   * MicroProfileConfigProperties}' size is {@code 0}.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @return {@code true}, rarely, if this {@link
+   * MicroProfileConfigProperties} is empty; {@code false} otherwise
+   *
+   * @see Properties#isEmpty()
+   *
+   * @see Config#getPropertyNames()
+   */
   @Override
   public synchronized final boolean isEmpty() {
     boolean returnValue = super.isEmpty();
-    if (!returnValue) {
+    if (returnValue) {
       final Iterable<?> propertyNames = this.config.getPropertyNames();
       if (propertyNames != null) {
         final Iterator<?> iterator = propertyNames.iterator();
@@ -246,24 +386,95 @@ public class MicroProfileConfigProperties extends Properties {
     }
     return returnValue;
   }
-  
+
+  /**
+   * Returns the size of this {@link MicroProfileConfigProperties} as
+   * expressed by the size of its {@linkplain #keySet() key set}.
+   *
+   * <p>This method returns {@code int}s that are greater than or equal to zero.</p>
+   *
+   * <p>This method rarely returns {@code 0} given the fact that a
+   * {@link Config} normally expresses at least one configuration
+   * property value.</p>
+   *
+   * <p>Use the {@link #isEmpty()} method for a much, much faster way
+   * to check for a size of {@code 0}.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @return the size of this {@link MicroProfileConfigProperties}
+   *
+   * @see #keySet()
+   *
+   * @see #isEmpty()
+   */
   @Override
   public synchronized final int size() {
     final int returnValue;
-    final Set<?> keys = this.keySet();
-    if (keys == null) {
+    final Set<?> keySet = this.keySet();
+    if (keySet == null) {
       returnValue = 0;
     } else {
-      returnValue = keys.size();
+      returnValue = keySet.size();
     }
     return returnValue;
   }
 
+  /**
+   * Invokes the {@link #keySet()} method and returns its return
+   * value.
+   *
+   * <p>This method never returns {@code null}.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @return the result of invoking the {@link #keySet()} method.
+   *
+   * @see #keySet()
+   */
   @Override
   public synchronized final Enumeration<Object> keys() {
     return new IteratorEnumeration<>(this.keySet());
   }
 
+  /**
+   * Returns a non-{@code null}, {@linkplain
+   * Collections#unmodifiableSet(Set) immutable <code>Set</code>} of
+   * {@link Object}s that contains the keys stored directly by this
+   * {@link MicroProfileConfigProperties} or that are contained in the
+   * return value of a {@link Config#getPropertyNames()} invocation.
+   *
+   * <p>The {@link Set} of {@link Object}s returned by this method is
+   * a disconnected snapshot in time of the keys that were thought to
+   * be in this {@link MicroProfileConfigProperties} at the time the
+   * snapshot was constructed.  Changes to this {@link
+   * MicroProfileConfigProperties} are not reflected in the {@link
+   * Set}.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * <p>The {@link Set} returned by this method is safe for concurrent
+   * use by multiple threads.</p>
+   *
+   * @return a non-{@code null}, {@linkplain
+   * Collections#unmodifiableSet(Set) immutable <code>Set</code>} of
+   * {@link Object}s that contains the keys stored directly by this
+   * {@link MicroProfileConfigProperties} or that are contained in the
+   * return value of a {@link Config#getPropertyNames()} invocation
+   *
+   * @see Properties#keySet()
+   *
+   * @see Config#getPropertyNames()
+   */
   @Override
   public synchronized final Set<Object> keySet() {
     final Set<Object> returnValue;
@@ -295,38 +506,61 @@ public class MicroProfileConfigProperties extends Properties {
     return returnValue;
   }
 
+  /**
+   * Returns a non-{@code null} {@link Enumeration} constructed atop
+   * the {@link Collection#iterator() <code>Iterator</code> supplied
+   * by the <code>Collection</code>} returned by an invocation of this
+   * {@link MicroProfileConfigProperties}' {@link #values()} method.
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @return a non-{@code null} {@link Enumeration} over the values
+   * directly contained by this {@link MicroProfileConfigProperties}
+   * or indirectly accessible via calls to {@link
+   * Config#getOptionalValue(String, Class)}
+   *
+   * @see #values()
+   *
+   * @see Config#getPropertyNames()
+   *
+   * @see Config#getOptionalValue(String, Class)
+   */
   @Override
   public synchronized final Enumeration<Object> elements() {
-    final Enumeration<Object> returnValue;
-    if (this.iterating) {
-      returnValue = super.elements();
-    } else {
-      this.iterating = true;
-      try {
-        final Iterable<?> configKeys = this.config.getPropertyNames();
-        if (configKeys == null) {
-          returnValue = super.elements();
-        } else {
-          final Collection<Object> values = new ArrayList<>();
-          synchronized (configKeys) {
-            for (final Object configKey : configKeys) {
-              final Optional<?> configValue = this.config.getOptionalValue(String.valueOf(configKey), String.class);
-              if (configValue == null || !configValue.isPresent()) {
-                values.add(null);
-              } else {
-                values.add(configValue.get());
-              }
-            }
-          }
-          returnValue = new IteratorEnumeration<>(values);
-        }
-      } finally {
-        this.iterating = false;
-      }
-    }
-    return returnValue;
+    return new IteratorEnumeration<>(this.values());
   }
 
+  /**
+   * Returns a non-{@code null}, {@linkplain
+   * Collections#unmodifiableCollection(Collection) immutable
+   * <code>Collection</code>} of this {@link
+   * MicroProfileConfigProperties}' values.
+   *
+   * <p>The values returned are those stored directly (via calls to
+   * {@link #put(Object, Object)}, for example) or stored implicitly
+   * as configuration values accessible via calls to {@link
+   * Config#getOptionalValue(String, Class)}.</p>
+   *
+   * <p>Changes in this {@link MicroProfileConfigProperties} are not
+   * reflected in the returned {@link Collection}.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @return a non-{@code null}, {@linkplain
+   * Collections#unmodifiableCollection(Collection) immutable
+   * <code>Collection</code>} of this {@link
+   * MicroProfileConfigProperties}' values
+   *
+   * @see Config#getPropertyNames()
+   *
+   * @see Config#getOptionalValue(String, Class)
+   */
   @Override
   public synchronized final Collection<Object> values() {
     final Collection<Object> returnValue;
@@ -339,7 +573,7 @@ public class MicroProfileConfigProperties extends Properties {
         if (configKeys == null) {
           returnValue = Collections.unmodifiableCollection(super.values());
         } else {
-          final Collection<Object> values = new ArrayList<>();
+          final Collection<Object> values = new ArrayList<>(super.values());
           synchronized (configKeys) {
             for (final Object configKey : configKeys) {
               final Optional<?> configValue = this.config.getOptionalValue(String.valueOf(configKey), String.class);
@@ -359,6 +593,40 @@ public class MicroProfileConfigProperties extends Properties {
     return returnValue;
   }
 
+  /**
+   * Returns a non-{@code null} {@linkplain
+   * Collections#unmodifiableSet(Set) immutable <code>Set</code>} of
+   * {@linkplain SimpleImmutableEntry immutable <code>Entry</code>}
+   * instances representing this {@link MicroProfileConfigProperties}'
+   * entries.
+   *
+   * <p>The entries returned are those that result from calls to
+   * {@link #put(Object, Object)} and similar methods, and from
+   * configuration property values accessible via calls to {@link
+   * Config#getOptionalValue(String, Class)}.</p>
+   *
+   * <p>This method calls the {@link #keySet()} and {@link
+   * #get(Object)} methods.
+   *
+   * <p>Iteration order of the returned {@link Set} is not defined,
+   * with the exception that entries stored directly come at the head
+   * of the returned {@link Set}.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @return a non-{@code null} {@linkplain
+   * Collections#unmodifiableSet(Set) immutable <code>Set</code>} of
+   * {@linkplain SimpleImmutableEntry immutable <code>Entry</code>}
+   * instances representing this {@link MicroProfileConfigProperties}'
+   * entries
+   *
+   * @see Config#getPropertyNames()
+   *
+   * @see Config#getOptionalValue(String, Class)
+   */
   @Override
   public synchronized final Set<Entry<Object, Object>> entrySet() {
     final Set<Entry<Object, Object>> returnValue;
@@ -374,6 +642,36 @@ public class MicroProfileConfigProperties extends Properties {
     }
     return returnValue;
   }
+
+  /**
+   * Installs an instance of {@link MicroProfileConfigProperties}
+   * somewhat irrevocably as {@linkplain
+   * System#setProperties(Properties) the system properties}, with the
+   * current {@linkplain System#getProperties() system properties} as
+   * its defaults.
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @exception SecurityException if permission is not granted
+   */
+  public static final void installAsSystemProperties() {
+    AccessController.doPrivileged(new PrivilegedAction<Void>() {
+        @Override
+        public final Void run() {
+          System.setProperties(new MicroProfileConfigProperties(System.getProperties()));
+          return null;
+        }
+      });
+  }
+
+
+  /*
+   * Inner and nested classes.
+   */
+  
 
   private static final class IteratorEnumeration<T> implements Enumeration<T>, Iterator<T> {
 
@@ -448,25 +746,6 @@ public class MicroProfileConfigProperties extends Properties {
       }
     }
     
-  }
-
-  /**
-   * Installs an instance of {@link MicroProfileConfigProperties}
-   * somewhat irrevocably as {@linkplain
-   * System#setProperties(Properties) the system properties}, with the
-   * current {@linkplain System#getProperties() system properties} as
-   * its defaults.
-   *
-   * @exception SecurityException if permission is not granted
-   */
-  public static final void installAsSystemProperties() {
-    AccessController.doPrivileged(new PrivilegedAction<Void>() {
-        @Override
-        public final Void run() {
-          System.setProperties(new MicroProfileConfigProperties(System.getProperties()));
-          return null;
-        }
-      });
   }
   
 }

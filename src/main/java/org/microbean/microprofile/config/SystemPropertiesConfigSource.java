@@ -16,8 +16,6 @@
  */
 package org.microbean.microprofile.config;
 
-import java.io.Serializable;
-
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -26,6 +24,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 class SystemPropertiesConfigSource extends AbstractConfigSource {
 
@@ -41,13 +40,20 @@ class SystemPropertiesConfigSource extends AbstractConfigSource {
     final Properties systemProperties = AccessController.doPrivileged((PrivilegedAction<Properties>)() -> System.getProperties());
     assert systemProperties != null;
     final Map<String, String> returnValue = new LinkedHashMap<>();
-    final Collection<? extends String> systemPropertyNames = systemProperties.stringPropertyNames();
+    final Collection<? extends String> systemPropertyNames = this.getPropertyNames();
     assert systemPropertyNames != null;
     for (final String name : systemPropertyNames) {
       assert name != null;
       returnValue.put(name, systemProperties.getProperty(name));
     }
     return Collections.unmodifiableMap(returnValue);
+  }
+
+  @Override
+  public Set<String> getPropertyNames() {
+    final Properties systemProperties = AccessController.doPrivileged((PrivilegedAction<Properties>)() -> System.getProperties());
+    assert systemProperties != null;
+    return systemProperties.stringPropertyNames();
   }
 
   @Override

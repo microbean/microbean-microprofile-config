@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 class PropertiesConfigSource extends AbstractConfigSource {
 
@@ -41,14 +42,12 @@ class PropertiesConfigSource extends AbstractConfigSource {
   @Override
   public Map<String, String> getProperties() {
     Map<String, String> returnValue = null;
-    if (this.properties != null) {
-      final Collection<? extends String> propertyNames = this.properties.stringPropertyNames();
-      if (propertyNames != null && !propertyNames.isEmpty()) {
-        returnValue = new LinkedHashMap<>();
-        for (final String propertyName : propertyNames) {
-          if (propertyName != null) {
-            returnValue.put(propertyName, this.properties.getProperty(propertyName));
-          }
+    final Collection<? extends String> propertyNames = this.getPropertyNames();
+    if (propertyNames != null && !propertyNames.isEmpty()) {
+      returnValue = new LinkedHashMap<>();
+      for (final String propertyName : propertyNames) {
+        if (propertyName != null) {
+          returnValue.put(propertyName, this.properties.getProperty(propertyName));
         }
       }
     }
@@ -56,6 +55,17 @@ class PropertiesConfigSource extends AbstractConfigSource {
       returnValue = Collections.emptyMap();
     } else {
       returnValue = Collections.unmodifiableMap(returnValue);
+    }
+    return returnValue;
+  }
+
+  @Override
+  public Set<String> getPropertyNames() {
+    final Set<String> returnValue;
+    if (this.properties == null) {
+      returnValue = Collections.emptySet();
+    } else {
+      returnValue = this.properties.stringPropertyNames();
     }
     return returnValue;
   }

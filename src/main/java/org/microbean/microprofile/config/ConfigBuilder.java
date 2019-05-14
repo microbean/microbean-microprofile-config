@@ -18,29 +18,19 @@ package org.microbean.microprofile.config;
 
 import java.lang.ref.WeakReference;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.IOException;
-import java.io.Reader;
 
 import java.lang.reflect.Type;
-
-import java.net.URL;
-
-import java.nio.charset.StandardCharsets;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import org.eclipse.microprofile.config.Config;
 
@@ -59,13 +49,13 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
 
   private final Collection<ConfigSource> sources;
 
-  private volatile WeakReference<ClassLoader> classLoader;
+  private volatile ClassLoader classLoader;
   
   ConfigBuilder() {
     super();
     this.converters = new LinkedList<>();
     this.sources = new LinkedList<>();
-    this.classLoader = new WeakReference<>(AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader()));
+    this.classLoader = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader());
   }
 
   @Override
@@ -105,10 +95,7 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
     ClassLoader classLoader = null;
     
     if (this.addDiscoveredSources) {
-      classLoader = this.classLoader.get();
-      if (classLoader == null) {
-        throw new IllegalStateException();
-      }
+      classLoader = this.classLoader;
       if (sources == null) {
         sources = new LinkedList<>();
       }
@@ -125,10 +112,7 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
     final Map<Type, Converter<?>> converters = new HashMap<>();
     if (this.addDiscoveredConverters) {
       if (classLoader == null) {
-        classLoader = this.classLoader.get();
-        if (classLoader == null) {
-          throw new IllegalStateException();
-        }
+        classLoader = this.classLoader;
       }
       converters.putAll(ConversionHub.getDiscoveredConverters(classLoader));
     }
@@ -161,6 +145,10 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
 
   @Override
   public final <T> ConfigBuilder withConverter(final Class<T> type, final int ordinal, final Converter<T> converter) {
+    return this.withConverter((Type)type, ordinal, converter);
+  }
+
+  public final <T> ConfigBuilder withConverter(final Type type, final int ordinal, final Converter<T> converter) {
     // The specification says nothing about null arguments.
     if (type != null && converter != null) {
       synchronized (this.converters) {
@@ -205,11 +193,13 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
   }
 
   @Override
-  public final ConfigBuilder forClassLoader(ClassLoader classLoader) {
+  public final ConfigBuilder forClassLoader(final ClassLoader classLoader) {
     if (classLoader == null) {
-      classLoader = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader());
+      // See https://github.com/eclipse/microprofile-config/issues/426
+      this.classLoader = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader());
+    } else {
+      this.classLoader = classLoader;
     }
-    this.classLoader = new WeakReference<>(classLoader);
     return this;
   }
 

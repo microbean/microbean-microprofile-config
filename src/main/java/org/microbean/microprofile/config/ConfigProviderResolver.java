@@ -23,14 +23,11 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Set;
 import java.util.WeakHashMap;
 
 import org.eclipse.microprofile.config.Config;
@@ -137,6 +134,21 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
    *
    * <p>This method is safe for concurrent use by multiple threads.</p>
    *
+   * <p>The {@link ConfigBuilder} implementation is safe for
+   * concurrent use by multiple threads.</p>
+   *
+   * <h2>Implementation Notes</h2>
+   *
+   * <p>Because of the requirement of having an implementation of the
+   * {@link ConfigBuilder#forClassLoader(ClassLoader)} method, the
+   * {@link ConfigBuilder} implementation returned by this method may
+   * contain a strong reference to a {@link ClassLoader} supplied to
+   * it by that method.  The programmer needs to take care that this
+   * does not result in classloader leaks.  In general, {@link
+   * ConfigBuilder}s should be retained for only as long as is
+   * necessary to {@linkplain ConfigBuilder#build() build} a {@link
+   * Config} and no longer.</p>
+   *
    * @return a new {@link
    * org.eclipse.microprofile.config.spi.ConfigBuilder}; never {@code
    * null}
@@ -189,7 +201,10 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
    * there are implications} that a {@code null} {@link ClassLoader}
    * means that the current thread's {@linkplain
    * Thread#getContextClassLoader() context classloader} should be
-   * used instead.  This implementation follows those implications.</p>
+   * used instead.  This implementation follows those implications.
+   * See <a
+   * href="https://github.com/eclipse/microprofile-config/issues/426"
+   * target="_parent">issue 426</a> for more details.
    *
    * @param classLoader the {@link ClassLoader} used to identify the
    * {@link Config} to return; may be {@code null} in which case the
@@ -201,10 +216,15 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
    * @see #getBuilder()
    *
    * @see #getConfig()
+   *
+   * @see <a
+   * href="https://github.com/eclipse/microprofile-config/issues/426"
+   * target="_parent">MicroProfile Config issue 426</a>
    */
   @Override
   public final Config getConfig(ClassLoader classLoader) {
     if (classLoader == null) {
+      // See https://github.com/eclipse/microprofile-config/issues/426
       classLoader = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader());
     }
     Config returnValue = null;
@@ -246,7 +266,9 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
    * <p>This implementation assumes "current Application" is
    * equivalent to "current thread's {@linkplain
    * Thread#getContextClassLoader() context
-   * <code>ClassLoader</code>}".</p>
+   * <code>ClassLoader</code>}".  See <a
+   * href="https://github.com/eclipse/microprofile-config/issues/426"
+   * target="_parent">issue 426</a> for more details.</p>
    *
    * @param config the {@link Config} to register; may be {@code null}
    * in which case no action will be taken
@@ -259,11 +281,16 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
    * @see
    * org.eclipse.microprofile.config.spi.ConfigProviderResolver#registerConfig(Config,
    * ClassLoader)
+   *
+   * @see <a
+   * href="https://github.com/eclipse/microprofile-config/issues/426"
+   * target="_parent">MicroProfile Config issue 426</a>
    */
   @Override
   public final void registerConfig(final Config config, ClassLoader classLoader) {
     if (config != null) {
       if (classLoader == null) {
+        // See https://github.com/eclipse/microprofile-config/issues/426
         classLoader = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader());
       }
       final WeakAutoCloseableReference<ClassLoader, Config> configReference = new WeakAutoCloseableReference<>(classLoader, config, this.autoClosingReferenceQueue);
@@ -370,8 +397,9 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
                 try {
                   entry = entryIterator.next();
                 } catch (final NoSuchElementException noSuchElementException) {
-                  // This can happen because we're working with a
-                  // WeakHashMap.
+                  // This can happen legally because we're working
+                  // with a WeakHashMap, so keys are effectively being
+                  // removed by the garbage collector at any point.
                 }
                 if (entry != null) {
                   final WeakAutoCloseableReference<?, ? extends Config> configReference = entry.getValue();
@@ -452,6 +480,7 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
     private AutoCloseableCloserThread(final ReferenceQueue<?> referenceQueue) {
       super(AutoCloseableCloserThread.class.getName());
       this.setDaemon(true);
+      this.setPriority(Thread.MIN_PRIORITY + 1); // low but not too low
       this.referenceQueue = Objects.requireNonNull(referenceQueue);
     }
 

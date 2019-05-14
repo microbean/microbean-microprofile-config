@@ -291,7 +291,10 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
   @SuppressWarnings("unchecked")
   private final <T> Converter<T> computeConverter(final Type conversionType) throws ReflectiveOperationException {
     Converter<T> returnValue = null;
-    if (CharSequence.class.equals(conversionType) || String.class.equals(conversionType)) {
+    if (CharSequence.class.equals(conversionType) ||
+        String.class.equals(conversionType) ||
+        Serializable.class.equals(conversionType) ||
+        Object.class.equals(conversionType)) {
       returnValue = new SerializableConverter<T>() {
           private static final long serialVersionUID = 1L;
           @Override

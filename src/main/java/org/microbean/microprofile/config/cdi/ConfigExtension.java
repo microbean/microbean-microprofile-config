@@ -32,9 +32,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.Destroyed;
-
 import javax.enterprise.context.spi.CreationalContext;
 
 import javax.enterprise.event.Observes;
@@ -59,8 +56,6 @@ import javax.enterprise.inject.spi.ProcessObserverMethod;
 import org.eclipse.microprofile.config.Config;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-
-import org.eclipse.microprofile.config.spi.ConfigProviderResolver;
 
 /**
  * An {@link Extension} that enables injection of {@link

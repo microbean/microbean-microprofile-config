@@ -508,7 +508,7 @@ public class MicroProfileConfigProperties extends Properties {
 
   /**
    * Returns a non-{@code null} {@link Enumeration} constructed atop
-   * the {@link Collection#iterator() <code>Iterator</code> supplied
+   * the {@linkplain Collection#iterator() <code>Iterator</code> supplied
    * by the <code>Collection</code>} returned by an invocation of this
    * {@link MicroProfileConfigProperties}' {@link #values()} method.
    *

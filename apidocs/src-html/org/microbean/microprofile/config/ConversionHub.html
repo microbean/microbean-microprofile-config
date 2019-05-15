@@ -299,425 +299,428 @@
 <span class="sourceLineNo">291</span>  @SuppressWarnings("unchecked")<a name="line.291"></a>
 <span class="sourceLineNo">292</span>  private final &lt;T&gt; Converter&lt;T&gt; computeConverter(final Type conversionType) throws ReflectiveOperationException {<a name="line.292"></a>
 <span class="sourceLineNo">293</span>    Converter&lt;T&gt; returnValue = null;<a name="line.293"></a>
-<span class="sourceLineNo">294</span>    if (CharSequence.class.equals(conversionType) || String.class.equals(conversionType)) {<a name="line.294"></a>
-<span class="sourceLineNo">295</span>      returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.295"></a>
-<span class="sourceLineNo">296</span>          private static final long serialVersionUID = 1L;<a name="line.296"></a>
-<span class="sourceLineNo">297</span>          @Override<a name="line.297"></a>
-<span class="sourceLineNo">298</span>          public final T convert(final String rawValue) {<a name="line.298"></a>
-<span class="sourceLineNo">299</span>            return (T)rawValue;<a name="line.299"></a>
-<span class="sourceLineNo">300</span>          }<a name="line.300"></a>
-<span class="sourceLineNo">301</span>        };<a name="line.301"></a>
-<span class="sourceLineNo">302</span><a name="line.302"></a>
-<span class="sourceLineNo">303</span>    } else if (Boolean.class.equals(conversionType) || boolean.class.equals(conversionType)) {<a name="line.303"></a>
-<span class="sourceLineNo">304</span>      returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.304"></a>
-<span class="sourceLineNo">305</span>          private static final long serialVersionUID = 1L;<a name="line.305"></a>
-<span class="sourceLineNo">306</span>          @Override<a name="line.306"></a>
-<span class="sourceLineNo">307</span>          public final T convert(final String rawValue) {<a name="line.307"></a>
-<span class="sourceLineNo">308</span>            return (T)Boolean.valueOf(rawValue != null &amp;&amp;<a name="line.308"></a>
-<span class="sourceLineNo">309</span>                                      ("true".equalsIgnoreCase(rawValue) ||<a name="line.309"></a>
-<span class="sourceLineNo">310</span>                                       "y".equalsIgnoreCase(rawValue) ||<a name="line.310"></a>
-<span class="sourceLineNo">311</span>                                       "yes".equalsIgnoreCase(rawValue) ||<a name="line.311"></a>
-<span class="sourceLineNo">312</span>                                       "on".equalsIgnoreCase(rawValue) ||<a name="line.312"></a>
-<span class="sourceLineNo">313</span>                                       "1".equals(rawValue)));<a name="line.313"></a>
-<span class="sourceLineNo">314</span>          }<a name="line.314"></a>
-<span class="sourceLineNo">315</span>        };<a name="line.315"></a>
-<span class="sourceLineNo">316</span><a name="line.316"></a>
-<span class="sourceLineNo">317</span>    } else if (URL.class.equals(conversionType)) {<a name="line.317"></a>
-<span class="sourceLineNo">318</span>      returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.318"></a>
-<span class="sourceLineNo">319</span>          private static final long serialVersionUID = 1L;<a name="line.319"></a>
-<span class="sourceLineNo">320</span>          @Override<a name="line.320"></a>
-<span class="sourceLineNo">321</span>          public final T convert(final String rawValue) {<a name="line.321"></a>
-<span class="sourceLineNo">322</span>            try {<a name="line.322"></a>
-<span class="sourceLineNo">323</span>              return (T)URI.create(rawValue).toURL();<a name="line.323"></a>
-<span class="sourceLineNo">324</span>            } catch (final MalformedURLException malformedUrlException) {<a name="line.324"></a>
-<span class="sourceLineNo">325</span>              throw new IllegalArgumentException(malformedUrlException.getMessage(), malformedUrlException);<a name="line.325"></a>
-<span class="sourceLineNo">326</span>            }<a name="line.326"></a>
-<span class="sourceLineNo">327</span>          }<a name="line.327"></a>
-<span class="sourceLineNo">328</span>        };<a name="line.328"></a>
-<span class="sourceLineNo">329</span><a name="line.329"></a>
-<span class="sourceLineNo">330</span>    } else if (Class.class.equals(conversionType)) {<a name="line.330"></a>
-<span class="sourceLineNo">331</span>      returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.331"></a>
-<span class="sourceLineNo">332</span>          private static final long serialVersionUID = 1L;<a name="line.332"></a>
-<span class="sourceLineNo">333</span>          @Override<a name="line.333"></a>
-<span class="sourceLineNo">334</span>          public final T convert(final String rawValue) {<a name="line.334"></a>
-<span class="sourceLineNo">335</span>            try {<a name="line.335"></a>
-<span class="sourceLineNo">336</span>              // Seems odd that the specification mandates the use of<a name="line.336"></a>
-<span class="sourceLineNo">337</span>              // the single-argument Class#forName(String) method, but<a name="line.337"></a>
-<span class="sourceLineNo">338</span>              // it's spelled out in black and white:<a name="line.338"></a>
-<span class="sourceLineNo">339</span>              // https://github.com/eclipse/microprofile-config/blob/20e1d59dd1055867a54e65b77405f9e68611544e/spec/src/main/asciidoc/converters.asciidoc#built-in-converters<a name="line.339"></a>
-<span class="sourceLineNo">340</span>              // See<a name="line.340"></a>
-<span class="sourceLineNo">341</span>              // https://github.com/eclipse/microprofile-config/issues/424.<a name="line.341"></a>
-<span class="sourceLineNo">342</span>              return (T)Class.forName(rawValue);<a name="line.342"></a>
-<span class="sourceLineNo">343</span>            } catch (final ClassNotFoundException classNotFoundException) {<a name="line.343"></a>
-<span class="sourceLineNo">344</span>              throw new IllegalArgumentException(classNotFoundException.getMessage(), classNotFoundException);<a name="line.344"></a>
-<span class="sourceLineNo">345</span>            }<a name="line.345"></a>
-<span class="sourceLineNo">346</span>          }<a name="line.346"></a>
-<span class="sourceLineNo">347</span>        };<a name="line.347"></a>
-<span class="sourceLineNo">348</span><a name="line.348"></a>
-<span class="sourceLineNo">349</span>    } else if (conversionType instanceof ParameterizedType) {<a name="line.349"></a>
-<span class="sourceLineNo">350</span>      final ParameterizedType parameterizedType = (ParameterizedType)conversionType;<a name="line.350"></a>
-<span class="sourceLineNo">351</span>      final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();<a name="line.351"></a>
-<span class="sourceLineNo">352</span>      assert actualTypeArguments != null;<a name="line.352"></a>
-<span class="sourceLineNo">353</span>      assert actualTypeArguments.length &gt; 0;<a name="line.353"></a>
-<span class="sourceLineNo">354</span>      final Type rawType = parameterizedType.getRawType();<a name="line.354"></a>
-<span class="sourceLineNo">355</span>      assert rawType instanceof Class : "!(parameterizedType.getRawType() instanceof Class): " + rawType;<a name="line.355"></a>
-<span class="sourceLineNo">356</span>      final Class&lt;?&gt; conversionClass = (Class&lt;?&gt;)rawType;<a name="line.356"></a>
-<span class="sourceLineNo">357</span>      assert !conversionClass.isArray();<a name="line.357"></a>
-<span class="sourceLineNo">358</span><a name="line.358"></a>
-<span class="sourceLineNo">359</span>      if (Optional.class.isAssignableFrom(conversionClass)) {<a name="line.359"></a>
-<span class="sourceLineNo">360</span>        assert actualTypeArguments.length == 1;<a name="line.360"></a>
-<span class="sourceLineNo">361</span>        final Type firstTypeArgument = actualTypeArguments[0];<a name="line.361"></a>
-<span class="sourceLineNo">362</span>        returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.362"></a>
-<span class="sourceLineNo">363</span>            private static final long serialVersionUID = 1L;<a name="line.363"></a>
-<span class="sourceLineNo">364</span>            @Override<a name="line.364"></a>
-<span class="sourceLineNo">365</span>            public final T convert(final String rawValue) {<a name="line.365"></a>
-<span class="sourceLineNo">366</span>              return (T)Optional.ofNullable(ConversionHub.this.convert(rawValue, firstTypeArgument)); // XXX recursive call<a name="line.366"></a>
-<span class="sourceLineNo">367</span>            }<a name="line.367"></a>
-<span class="sourceLineNo">368</span>          };<a name="line.368"></a>
-<span class="sourceLineNo">369</span><a name="line.369"></a>
-<span class="sourceLineNo">370</span>      } else if (Class.class.isAssignableFrom(conversionClass)) {<a name="line.370"></a>
-<span class="sourceLineNo">371</span>        returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.371"></a>
-<span class="sourceLineNo">372</span>            private static final long serialVersionUID = 1L;<a name="line.372"></a>
-<span class="sourceLineNo">373</span>            @Override<a name="line.373"></a>
-<span class="sourceLineNo">374</span>            public final T convert(final String rawValue) {<a name="line.374"></a>
-<span class="sourceLineNo">375</span>              return ConversionHub.this.convert(rawValue, conversionClass); // XXX recursive call<a name="line.375"></a>
-<span class="sourceLineNo">376</span>            }<a name="line.376"></a>
-<span class="sourceLineNo">377</span>          };<a name="line.377"></a>
-<span class="sourceLineNo">378</span><a name="line.378"></a>
-<span class="sourceLineNo">379</span>      } else if (Collection.class.isAssignableFrom(conversionClass)) {<a name="line.379"></a>
-<span class="sourceLineNo">380</span>        returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.380"></a>
-<span class="sourceLineNo">381</span>            private static final long serialVersionUID = 1L;<a name="line.381"></a>
-<span class="sourceLineNo">382</span>            @Override<a name="line.382"></a>
-<span class="sourceLineNo">383</span>            public final T convert(final String rawValue) {<a name="line.383"></a>
-<span class="sourceLineNo">384</span>              Collection&lt;Object&gt; container = null;<a name="line.384"></a>
-<span class="sourceLineNo">385</span>              if (conversionClass.isInterface()) {<a name="line.385"></a>
-<span class="sourceLineNo">386</span>                if (Set.class.isAssignableFrom(conversionClass)) {<a name="line.386"></a>
-<span class="sourceLineNo">387</span>                  container = new HashSet&lt;&gt;();<a name="line.387"></a>
-<span class="sourceLineNo">388</span>                } else {<a name="line.388"></a>
-<span class="sourceLineNo">389</span>                  container = new ArrayList&lt;&gt;();<a name="line.389"></a>
-<span class="sourceLineNo">390</span>                }<a name="line.390"></a>
-<span class="sourceLineNo">391</span>              } else {<a name="line.391"></a>
-<span class="sourceLineNo">392</span>                try {<a name="line.392"></a>
-<span class="sourceLineNo">393</span>                  container = (Collection&lt;Object&gt;)conversionClass.getDeclaredConstructor().newInstance();<a name="line.393"></a>
-<span class="sourceLineNo">394</span>                } catch (final ReflectiveOperationException reflectiveOperationException) {<a name="line.394"></a>
-<span class="sourceLineNo">395</span>                  throw new IllegalArgumentException(reflectiveOperationException.getMessage(), reflectiveOperationException);<a name="line.395"></a>
-<span class="sourceLineNo">396</span>                }<a name="line.396"></a>
-<span class="sourceLineNo">397</span>              }<a name="line.397"></a>
-<span class="sourceLineNo">398</span>              assert container != null;<a name="line.398"></a>
-<span class="sourceLineNo">399</span>              final Type firstTypeArgument = actualTypeArguments[0];<a name="line.399"></a>
-<span class="sourceLineNo">400</span>              final String[] parts = split(rawValue);<a name="line.400"></a>
-<span class="sourceLineNo">401</span>              assert parts != null;<a name="line.401"></a>
-<span class="sourceLineNo">402</span>              assert parts.length &gt; 0;<a name="line.402"></a>
-<span class="sourceLineNo">403</span>              for (final String part : parts) {<a name="line.403"></a>
-<span class="sourceLineNo">404</span>                final Object scalar = ConversionHub.this.convert(part, firstTypeArgument); // XXX recursive call<a name="line.404"></a>
-<span class="sourceLineNo">405</span>                container.add(scalar);<a name="line.405"></a>
-<span class="sourceLineNo">406</span>              }<a name="line.406"></a>
-<span class="sourceLineNo">407</span>              final T temp = (T)container;<a name="line.407"></a>
-<span class="sourceLineNo">408</span>              return temp;<a name="line.408"></a>
-<span class="sourceLineNo">409</span>            }<a name="line.409"></a>
-<span class="sourceLineNo">410</span>          };<a name="line.410"></a>
-<span class="sourceLineNo">411</span>      } else {<a name="line.411"></a>
-<span class="sourceLineNo">412</span>        throw new IllegalArgumentException("Unhandled conversion type: " + conversionType);<a name="line.412"></a>
-<span class="sourceLineNo">413</span>      }<a name="line.413"></a>
-<span class="sourceLineNo">414</span><a name="line.414"></a>
-<span class="sourceLineNo">415</span>    } else if (conversionType instanceof Class) {<a name="line.415"></a>
-<span class="sourceLineNo">416</span>      final Class&lt;?&gt; conversionClass = (Class&lt;?&gt;)conversionType;<a name="line.416"></a>
-<span class="sourceLineNo">417</span>      if (conversionClass.isArray()) {<a name="line.417"></a>
-<span class="sourceLineNo">418</span>        returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.418"></a>
-<span class="sourceLineNo">419</span>            private static final long serialVersionUID = 1L;<a name="line.419"></a>
-<span class="sourceLineNo">420</span>            @Override<a name="line.420"></a>
-<span class="sourceLineNo">421</span>            public final T convert(final String rawValue) {<a name="line.421"></a>
-<span class="sourceLineNo">422</span>              final String[] parts = split(rawValue);<a name="line.422"></a>
-<span class="sourceLineNo">423</span>              assert parts != null;<a name="line.423"></a>
-<span class="sourceLineNo">424</span>              T container = (T)Array.newInstance(conversionClass.getComponentType(), parts.length);<a name="line.424"></a>
-<span class="sourceLineNo">425</span>              for (int i = 0; i &lt; parts.length; i++) {<a name="line.425"></a>
-<span class="sourceLineNo">426</span>                final Object scalar = ConversionHub.this.convert(parts[i], conversionClass.getComponentType()); // XXX recursive call<a name="line.426"></a>
-<span class="sourceLineNo">427</span>                Array.set(container, i, scalar);<a name="line.427"></a>
-<span class="sourceLineNo">428</span>              }<a name="line.428"></a>
-<span class="sourceLineNo">429</span>              return container;<a name="line.429"></a>
-<span class="sourceLineNo">430</span>            }<a name="line.430"></a>
-<span class="sourceLineNo">431</span>          };<a name="line.431"></a>
-<span class="sourceLineNo">432</span><a name="line.432"></a>
-<span class="sourceLineNo">433</span>      } else {<a name="line.433"></a>
-<span class="sourceLineNo">434</span>        final Class&lt;?&gt; cls;<a name="line.434"></a>
-<span class="sourceLineNo">435</span>        if (conversionClass.isPrimitive()) {<a name="line.435"></a>
-<span class="sourceLineNo">436</span>          cls = wrapperClasses.get(conversionClass);<a name="line.436"></a>
-<span class="sourceLineNo">437</span>          assert cls != null;<a name="line.437"></a>
-<span class="sourceLineNo">438</span>        } else {<a name="line.438"></a>
-<span class="sourceLineNo">439</span>          cls = conversionClass;<a name="line.439"></a>
-<span class="sourceLineNo">440</span>        }<a name="line.440"></a>
-<span class="sourceLineNo">441</span>        returnValue = getConverterFromStaticMethod(cls, "of", String.class);<a name="line.441"></a>
-<span class="sourceLineNo">442</span>        if (returnValue == null) {<a name="line.442"></a>
-<span class="sourceLineNo">443</span>          returnValue = getConverterFromStaticMethod(cls, "of", CharSequence.class);<a name="line.443"></a>
-<span class="sourceLineNo">444</span>          if (returnValue == null) {<a name="line.444"></a>
-<span class="sourceLineNo">445</span>            returnValue = getConverterFromStaticMethod(cls, "valueOf", String.class);<a name="line.445"></a>
-<span class="sourceLineNo">446</span>            if (returnValue == null) {<a name="line.446"></a>
-<span class="sourceLineNo">447</span>              returnValue = getConverterFromStaticMethod(cls, "valueOf", CharSequence.class);<a name="line.447"></a>
-<span class="sourceLineNo">448</span>              if (returnValue == null) {<a name="line.448"></a>
-<span class="sourceLineNo">449</span>                returnValue = getConverterFromConstructor((Class&lt;T&gt;)cls, String.class);<a name="line.449"></a>
-<span class="sourceLineNo">450</span>                if (returnValue == null) {<a name="line.450"></a>
-<span class="sourceLineNo">451</span>                  returnValue = getConverterFromConstructor((Class&lt;T&gt;)cls, CharSequence.class);<a name="line.451"></a>
-<span class="sourceLineNo">452</span>                  if (returnValue == null) {<a name="line.452"></a>
-<span class="sourceLineNo">453</span>                    returnValue = getConverterFromStaticMethod(cls, "parse", String.class);<a name="line.453"></a>
-<span class="sourceLineNo">454</span>                    if (returnValue == null) {<a name="line.454"></a>
-<span class="sourceLineNo">455</span>                      returnValue = getConverterFromStaticMethod(cls, "parse", CharSequence.class);<a name="line.455"></a>
-<span class="sourceLineNo">456</span>                      if (returnValue == null) {<a name="line.456"></a>
-<span class="sourceLineNo">457</span>                        final PropertyEditor editor = PropertyEditorManager.findEditor(cls);<a name="line.457"></a>
-<span class="sourceLineNo">458</span>                        if (editor != null) {<a name="line.458"></a>
-<span class="sourceLineNo">459</span>                          returnValue = new PropertyEditorConverter&lt;T&gt;(cls, editor);<a name="line.459"></a>
-<span class="sourceLineNo">460</span>                        }<a name="line.460"></a>
-<span class="sourceLineNo">461</span>                      }<a name="line.461"></a>
-<span class="sourceLineNo">462</span>                    }<a name="line.462"></a>
-<span class="sourceLineNo">463</span>                  }<a name="line.463"></a>
-<span class="sourceLineNo">464</span>                }<a name="line.464"></a>
-<span class="sourceLineNo">465</span>              }<a name="line.465"></a>
-<span class="sourceLineNo">466</span>            }<a name="line.466"></a>
-<span class="sourceLineNo">467</span>          }<a name="line.467"></a>
-<span class="sourceLineNo">468</span>        }<a name="line.468"></a>
-<span class="sourceLineNo">469</span>      }<a name="line.469"></a>
-<span class="sourceLineNo">470</span>    } else {<a name="line.470"></a>
-<span class="sourceLineNo">471</span>      returnValue = null;<a name="line.471"></a>
-<span class="sourceLineNo">472</span>    }<a name="line.472"></a>
-<span class="sourceLineNo">473</span>    return returnValue;<a name="line.473"></a>
-<span class="sourceLineNo">474</span>  }<a name="line.474"></a>
-<span class="sourceLineNo">475</span><a name="line.475"></a>
-<span class="sourceLineNo">476</span>  private static final &lt;T&gt; Converter&lt;T&gt; getConverterFromStaticMethod(Class&lt;?&gt; methodHostClass, final String methodName, final Class&lt;? extends CharSequence&gt; soleParameterType) {<a name="line.476"></a>
-<span class="sourceLineNo">477</span>    Objects.requireNonNull(methodHostClass);<a name="line.477"></a>
-<span class="sourceLineNo">478</span>    Objects.requireNonNull(methodName);<a name="line.478"></a>
-<span class="sourceLineNo">479</span>    Objects.requireNonNull(soleParameterType);<a name="line.479"></a>
-<span class="sourceLineNo">480</span>    if (methodHostClass.isArray()) {<a name="line.480"></a>
-<span class="sourceLineNo">481</span>      throw new IllegalArgumentException("methodHostClass.isArray(): " + methodHostClass.getName());<a name="line.481"></a>
-<span class="sourceLineNo">482</span>    } else if (methodHostClass.isPrimitive()) {<a name="line.482"></a>
-<span class="sourceLineNo">483</span>      throw new IllegalArgumentException("methodHostClass.isPrimitive(): " + methodHostClass.getName());<a name="line.483"></a>
-<span class="sourceLineNo">484</span>    }<a name="line.484"></a>
-<span class="sourceLineNo">485</span>    Converter&lt;T&gt; returnValue = null;<a name="line.485"></a>
-<span class="sourceLineNo">486</span>    final Method method;<a name="line.486"></a>
-<span class="sourceLineNo">487</span>    Method temp = null;<a name="line.487"></a>
-<span class="sourceLineNo">488</span>    try {<a name="line.488"></a>
-<span class="sourceLineNo">489</span>      temp = methodHostClass.getMethod(methodName, soleParameterType);<a name="line.489"></a>
-<span class="sourceLineNo">490</span>    } catch (final NoSuchMethodException noSuchMethodException) {<a name="line.490"></a>
-<span class="sourceLineNo">491</span><a name="line.491"></a>
-<span class="sourceLineNo">492</span>    } finally {<a name="line.492"></a>
-<span class="sourceLineNo">493</span>      method = temp;<a name="line.493"></a>
-<span class="sourceLineNo">494</span>    }<a name="line.494"></a>
-<span class="sourceLineNo">495</span>    if (method != null &amp;&amp; Modifier.isStatic(method.getModifiers()) &amp;&amp; methodHostClass.isAssignableFrom(method.getReturnType())) {<a name="line.495"></a>
-<span class="sourceLineNo">496</span>      returnValue = new ExecutableBasedConverter&lt;&gt;(method);<a name="line.496"></a>
+<span class="sourceLineNo">294</span>    if (CharSequence.class.equals(conversionType) ||<a name="line.294"></a>
+<span class="sourceLineNo">295</span>        String.class.equals(conversionType) ||<a name="line.295"></a>
+<span class="sourceLineNo">296</span>        Serializable.class.equals(conversionType) ||<a name="line.296"></a>
+<span class="sourceLineNo">297</span>        Object.class.equals(conversionType)) {<a name="line.297"></a>
+<span class="sourceLineNo">298</span>      returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.298"></a>
+<span class="sourceLineNo">299</span>          private static final long serialVersionUID = 1L;<a name="line.299"></a>
+<span class="sourceLineNo">300</span>          @Override<a name="line.300"></a>
+<span class="sourceLineNo">301</span>          public final T convert(final String rawValue) {<a name="line.301"></a>
+<span class="sourceLineNo">302</span>            return (T)rawValue;<a name="line.302"></a>
+<span class="sourceLineNo">303</span>          }<a name="line.303"></a>
+<span class="sourceLineNo">304</span>        };<a name="line.304"></a>
+<span class="sourceLineNo">305</span><a name="line.305"></a>
+<span class="sourceLineNo">306</span>    } else if (Boolean.class.equals(conversionType) || boolean.class.equals(conversionType)) {<a name="line.306"></a>
+<span class="sourceLineNo">307</span>      returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.307"></a>
+<span class="sourceLineNo">308</span>          private static final long serialVersionUID = 1L;<a name="line.308"></a>
+<span class="sourceLineNo">309</span>          @Override<a name="line.309"></a>
+<span class="sourceLineNo">310</span>          public final T convert(final String rawValue) {<a name="line.310"></a>
+<span class="sourceLineNo">311</span>            return (T)Boolean.valueOf(rawValue != null &amp;&amp;<a name="line.311"></a>
+<span class="sourceLineNo">312</span>                                      ("true".equalsIgnoreCase(rawValue) ||<a name="line.312"></a>
+<span class="sourceLineNo">313</span>                                       "y".equalsIgnoreCase(rawValue) ||<a name="line.313"></a>
+<span class="sourceLineNo">314</span>                                       "yes".equalsIgnoreCase(rawValue) ||<a name="line.314"></a>
+<span class="sourceLineNo">315</span>                                       "on".equalsIgnoreCase(rawValue) ||<a name="line.315"></a>
+<span class="sourceLineNo">316</span>                                       "1".equals(rawValue)));<a name="line.316"></a>
+<span class="sourceLineNo">317</span>          }<a name="line.317"></a>
+<span class="sourceLineNo">318</span>        };<a name="line.318"></a>
+<span class="sourceLineNo">319</span><a name="line.319"></a>
+<span class="sourceLineNo">320</span>    } else if (URL.class.equals(conversionType)) {<a name="line.320"></a>
+<span class="sourceLineNo">321</span>      returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.321"></a>
+<span class="sourceLineNo">322</span>          private static final long serialVersionUID = 1L;<a name="line.322"></a>
+<span class="sourceLineNo">323</span>          @Override<a name="line.323"></a>
+<span class="sourceLineNo">324</span>          public final T convert(final String rawValue) {<a name="line.324"></a>
+<span class="sourceLineNo">325</span>            try {<a name="line.325"></a>
+<span class="sourceLineNo">326</span>              return (T)URI.create(rawValue).toURL();<a name="line.326"></a>
+<span class="sourceLineNo">327</span>            } catch (final MalformedURLException malformedUrlException) {<a name="line.327"></a>
+<span class="sourceLineNo">328</span>              throw new IllegalArgumentException(malformedUrlException.getMessage(), malformedUrlException);<a name="line.328"></a>
+<span class="sourceLineNo">329</span>            }<a name="line.329"></a>
+<span class="sourceLineNo">330</span>          }<a name="line.330"></a>
+<span class="sourceLineNo">331</span>        };<a name="line.331"></a>
+<span class="sourceLineNo">332</span><a name="line.332"></a>
+<span class="sourceLineNo">333</span>    } else if (Class.class.equals(conversionType)) {<a name="line.333"></a>
+<span class="sourceLineNo">334</span>      returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.334"></a>
+<span class="sourceLineNo">335</span>          private static final long serialVersionUID = 1L;<a name="line.335"></a>
+<span class="sourceLineNo">336</span>          @Override<a name="line.336"></a>
+<span class="sourceLineNo">337</span>          public final T convert(final String rawValue) {<a name="line.337"></a>
+<span class="sourceLineNo">338</span>            try {<a name="line.338"></a>
+<span class="sourceLineNo">339</span>              // Seems odd that the specification mandates the use of<a name="line.339"></a>
+<span class="sourceLineNo">340</span>              // the single-argument Class#forName(String) method, but<a name="line.340"></a>
+<span class="sourceLineNo">341</span>              // it's spelled out in black and white:<a name="line.341"></a>
+<span class="sourceLineNo">342</span>              // https://github.com/eclipse/microprofile-config/blob/20e1d59dd1055867a54e65b77405f9e68611544e/spec/src/main/asciidoc/converters.asciidoc#built-in-converters<a name="line.342"></a>
+<span class="sourceLineNo">343</span>              // See<a name="line.343"></a>
+<span class="sourceLineNo">344</span>              // https://github.com/eclipse/microprofile-config/issues/424.<a name="line.344"></a>
+<span class="sourceLineNo">345</span>              return (T)Class.forName(rawValue);<a name="line.345"></a>
+<span class="sourceLineNo">346</span>            } catch (final ClassNotFoundException classNotFoundException) {<a name="line.346"></a>
+<span class="sourceLineNo">347</span>              throw new IllegalArgumentException(classNotFoundException.getMessage(), classNotFoundException);<a name="line.347"></a>
+<span class="sourceLineNo">348</span>            }<a name="line.348"></a>
+<span class="sourceLineNo">349</span>          }<a name="line.349"></a>
+<span class="sourceLineNo">350</span>        };<a name="line.350"></a>
+<span class="sourceLineNo">351</span><a name="line.351"></a>
+<span class="sourceLineNo">352</span>    } else if (conversionType instanceof ParameterizedType) {<a name="line.352"></a>
+<span class="sourceLineNo">353</span>      final ParameterizedType parameterizedType = (ParameterizedType)conversionType;<a name="line.353"></a>
+<span class="sourceLineNo">354</span>      final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();<a name="line.354"></a>
+<span class="sourceLineNo">355</span>      assert actualTypeArguments != null;<a name="line.355"></a>
+<span class="sourceLineNo">356</span>      assert actualTypeArguments.length &gt; 0;<a name="line.356"></a>
+<span class="sourceLineNo">357</span>      final Type rawType = parameterizedType.getRawType();<a name="line.357"></a>
+<span class="sourceLineNo">358</span>      assert rawType instanceof Class : "!(parameterizedType.getRawType() instanceof Class): " + rawType;<a name="line.358"></a>
+<span class="sourceLineNo">359</span>      final Class&lt;?&gt; conversionClass = (Class&lt;?&gt;)rawType;<a name="line.359"></a>
+<span class="sourceLineNo">360</span>      assert !conversionClass.isArray();<a name="line.360"></a>
+<span class="sourceLineNo">361</span><a name="line.361"></a>
+<span class="sourceLineNo">362</span>      if (Optional.class.isAssignableFrom(conversionClass)) {<a name="line.362"></a>
+<span class="sourceLineNo">363</span>        assert actualTypeArguments.length == 1;<a name="line.363"></a>
+<span class="sourceLineNo">364</span>        final Type firstTypeArgument = actualTypeArguments[0];<a name="line.364"></a>
+<span class="sourceLineNo">365</span>        returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.365"></a>
+<span class="sourceLineNo">366</span>            private static final long serialVersionUID = 1L;<a name="line.366"></a>
+<span class="sourceLineNo">367</span>            @Override<a name="line.367"></a>
+<span class="sourceLineNo">368</span>            public final T convert(final String rawValue) {<a name="line.368"></a>
+<span class="sourceLineNo">369</span>              return (T)Optional.ofNullable(ConversionHub.this.convert(rawValue, firstTypeArgument)); // XXX recursive call<a name="line.369"></a>
+<span class="sourceLineNo">370</span>            }<a name="line.370"></a>
+<span class="sourceLineNo">371</span>          };<a name="line.371"></a>
+<span class="sourceLineNo">372</span><a name="line.372"></a>
+<span class="sourceLineNo">373</span>      } else if (Class.class.isAssignableFrom(conversionClass)) {<a name="line.373"></a>
+<span class="sourceLineNo">374</span>        returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.374"></a>
+<span class="sourceLineNo">375</span>            private static final long serialVersionUID = 1L;<a name="line.375"></a>
+<span class="sourceLineNo">376</span>            @Override<a name="line.376"></a>
+<span class="sourceLineNo">377</span>            public final T convert(final String rawValue) {<a name="line.377"></a>
+<span class="sourceLineNo">378</span>              return ConversionHub.this.convert(rawValue, conversionClass); // XXX recursive call<a name="line.378"></a>
+<span class="sourceLineNo">379</span>            }<a name="line.379"></a>
+<span class="sourceLineNo">380</span>          };<a name="line.380"></a>
+<span class="sourceLineNo">381</span><a name="line.381"></a>
+<span class="sourceLineNo">382</span>      } else if (Collection.class.isAssignableFrom(conversionClass)) {<a name="line.382"></a>
+<span class="sourceLineNo">383</span>        returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.383"></a>
+<span class="sourceLineNo">384</span>            private static final long serialVersionUID = 1L;<a name="line.384"></a>
+<span class="sourceLineNo">385</span>            @Override<a name="line.385"></a>
+<span class="sourceLineNo">386</span>            public final T convert(final String rawValue) {<a name="line.386"></a>
+<span class="sourceLineNo">387</span>              Collection&lt;Object&gt; container = null;<a name="line.387"></a>
+<span class="sourceLineNo">388</span>              if (conversionClass.isInterface()) {<a name="line.388"></a>
+<span class="sourceLineNo">389</span>                if (Set.class.isAssignableFrom(conversionClass)) {<a name="line.389"></a>
+<span class="sourceLineNo">390</span>                  container = new HashSet&lt;&gt;();<a name="line.390"></a>
+<span class="sourceLineNo">391</span>                } else {<a name="line.391"></a>
+<span class="sourceLineNo">392</span>                  container = new ArrayList&lt;&gt;();<a name="line.392"></a>
+<span class="sourceLineNo">393</span>                }<a name="line.393"></a>
+<span class="sourceLineNo">394</span>              } else {<a name="line.394"></a>
+<span class="sourceLineNo">395</span>                try {<a name="line.395"></a>
+<span class="sourceLineNo">396</span>                  container = (Collection&lt;Object&gt;)conversionClass.getDeclaredConstructor().newInstance();<a name="line.396"></a>
+<span class="sourceLineNo">397</span>                } catch (final ReflectiveOperationException reflectiveOperationException) {<a name="line.397"></a>
+<span class="sourceLineNo">398</span>                  throw new IllegalArgumentException(reflectiveOperationException.getMessage(), reflectiveOperationException);<a name="line.398"></a>
+<span class="sourceLineNo">399</span>                }<a name="line.399"></a>
+<span class="sourceLineNo">400</span>              }<a name="line.400"></a>
+<span class="sourceLineNo">401</span>              assert container != null;<a name="line.401"></a>
+<span class="sourceLineNo">402</span>              final Type firstTypeArgument = actualTypeArguments[0];<a name="line.402"></a>
+<span class="sourceLineNo">403</span>              final String[] parts = split(rawValue);<a name="line.403"></a>
+<span class="sourceLineNo">404</span>              assert parts != null;<a name="line.404"></a>
+<span class="sourceLineNo">405</span>              assert parts.length &gt; 0;<a name="line.405"></a>
+<span class="sourceLineNo">406</span>              for (final String part : parts) {<a name="line.406"></a>
+<span class="sourceLineNo">407</span>                final Object scalar = ConversionHub.this.convert(part, firstTypeArgument); // XXX recursive call<a name="line.407"></a>
+<span class="sourceLineNo">408</span>                container.add(scalar);<a name="line.408"></a>
+<span class="sourceLineNo">409</span>              }<a name="line.409"></a>
+<span class="sourceLineNo">410</span>              final T temp = (T)container;<a name="line.410"></a>
+<span class="sourceLineNo">411</span>              return temp;<a name="line.411"></a>
+<span class="sourceLineNo">412</span>            }<a name="line.412"></a>
+<span class="sourceLineNo">413</span>          };<a name="line.413"></a>
+<span class="sourceLineNo">414</span>      } else {<a name="line.414"></a>
+<span class="sourceLineNo">415</span>        throw new IllegalArgumentException("Unhandled conversion type: " + conversionType);<a name="line.415"></a>
+<span class="sourceLineNo">416</span>      }<a name="line.416"></a>
+<span class="sourceLineNo">417</span><a name="line.417"></a>
+<span class="sourceLineNo">418</span>    } else if (conversionType instanceof Class) {<a name="line.418"></a>
+<span class="sourceLineNo">419</span>      final Class&lt;?&gt; conversionClass = (Class&lt;?&gt;)conversionType;<a name="line.419"></a>
+<span class="sourceLineNo">420</span>      if (conversionClass.isArray()) {<a name="line.420"></a>
+<span class="sourceLineNo">421</span>        returnValue = new SerializableConverter&lt;T&gt;() {<a name="line.421"></a>
+<span class="sourceLineNo">422</span>            private static final long serialVersionUID = 1L;<a name="line.422"></a>
+<span class="sourceLineNo">423</span>            @Override<a name="line.423"></a>
+<span class="sourceLineNo">424</span>            public final T convert(final String rawValue) {<a name="line.424"></a>
+<span class="sourceLineNo">425</span>              final String[] parts = split(rawValue);<a name="line.425"></a>
+<span class="sourceLineNo">426</span>              assert parts != null;<a name="line.426"></a>
+<span class="sourceLineNo">427</span>              T container = (T)Array.newInstance(conversionClass.getComponentType(), parts.length);<a name="line.427"></a>
+<span class="sourceLineNo">428</span>              for (int i = 0; i &lt; parts.length; i++) {<a name="line.428"></a>
+<span class="sourceLineNo">429</span>                final Object scalar = ConversionHub.this.convert(parts[i], conversionClass.getComponentType()); // XXX recursive call<a name="line.429"></a>
+<span class="sourceLineNo">430</span>                Array.set(container, i, scalar);<a name="line.430"></a>
+<span class="sourceLineNo">431</span>              }<a name="line.431"></a>
+<span class="sourceLineNo">432</span>              return container;<a name="line.432"></a>
+<span class="sourceLineNo">433</span>            }<a name="line.433"></a>
+<span class="sourceLineNo">434</span>          };<a name="line.434"></a>
+<span class="sourceLineNo">435</span><a name="line.435"></a>
+<span class="sourceLineNo">436</span>      } else {<a name="line.436"></a>
+<span class="sourceLineNo">437</span>        final Class&lt;?&gt; cls;<a name="line.437"></a>
+<span class="sourceLineNo">438</span>        if (conversionClass.isPrimitive()) {<a name="line.438"></a>
+<span class="sourceLineNo">439</span>          cls = wrapperClasses.get(conversionClass);<a name="line.439"></a>
+<span class="sourceLineNo">440</span>          assert cls != null;<a name="line.440"></a>
+<span class="sourceLineNo">441</span>        } else {<a name="line.441"></a>
+<span class="sourceLineNo">442</span>          cls = conversionClass;<a name="line.442"></a>
+<span class="sourceLineNo">443</span>        }<a name="line.443"></a>
+<span class="sourceLineNo">444</span>        returnValue = getConverterFromStaticMethod(cls, "of", String.class);<a name="line.444"></a>
+<span class="sourceLineNo">445</span>        if (returnValue == null) {<a name="line.445"></a>
+<span class="sourceLineNo">446</span>          returnValue = getConverterFromStaticMethod(cls, "of", CharSequence.class);<a name="line.446"></a>
+<span class="sourceLineNo">447</span>          if (returnValue == null) {<a name="line.447"></a>
+<span class="sourceLineNo">448</span>            returnValue = getConverterFromStaticMethod(cls, "valueOf", String.class);<a name="line.448"></a>
+<span class="sourceLineNo">449</span>            if (returnValue == null) {<a name="line.449"></a>
+<span class="sourceLineNo">450</span>              returnValue = getConverterFromStaticMethod(cls, "valueOf", CharSequence.class);<a name="line.450"></a>
+<span class="sourceLineNo">451</span>              if (returnValue == null) {<a name="line.451"></a>
+<span class="sourceLineNo">452</span>                returnValue = getConverterFromConstructor((Class&lt;T&gt;)cls, String.class);<a name="line.452"></a>
+<span class="sourceLineNo">453</span>                if (returnValue == null) {<a name="line.453"></a>
+<span class="sourceLineNo">454</span>                  returnValue = getConverterFromConstructor((Class&lt;T&gt;)cls, CharSequence.class);<a name="line.454"></a>
+<span class="sourceLineNo">455</span>                  if (returnValue == null) {<a name="line.455"></a>
+<span class="sourceLineNo">456</span>                    returnValue = getConverterFromStaticMethod(cls, "parse", String.class);<a name="line.456"></a>
+<span class="sourceLineNo">457</span>                    if (returnValue == null) {<a name="line.457"></a>
+<span class="sourceLineNo">458</span>                      returnValue = getConverterFromStaticMethod(cls, "parse", CharSequence.class);<a name="line.458"></a>
+<span class="sourceLineNo">459</span>                      if (returnValue == null) {<a name="line.459"></a>
+<span class="sourceLineNo">460</span>                        final PropertyEditor editor = PropertyEditorManager.findEditor(cls);<a name="line.460"></a>
+<span class="sourceLineNo">461</span>                        if (editor != null) {<a name="line.461"></a>
+<span class="sourceLineNo">462</span>                          returnValue = new PropertyEditorConverter&lt;T&gt;(cls, editor);<a name="line.462"></a>
+<span class="sourceLineNo">463</span>                        }<a name="line.463"></a>
+<span class="sourceLineNo">464</span>                      }<a name="line.464"></a>
+<span class="sourceLineNo">465</span>                    }<a name="line.465"></a>
+<span class="sourceLineNo">466</span>                  }<a name="line.466"></a>
+<span class="sourceLineNo">467</span>                }<a name="line.467"></a>
+<span class="sourceLineNo">468</span>              }<a name="line.468"></a>
+<span class="sourceLineNo">469</span>            }<a name="line.469"></a>
+<span class="sourceLineNo">470</span>          }<a name="line.470"></a>
+<span class="sourceLineNo">471</span>        }<a name="line.471"></a>
+<span class="sourceLineNo">472</span>      }<a name="line.472"></a>
+<span class="sourceLineNo">473</span>    } else {<a name="line.473"></a>
+<span class="sourceLineNo">474</span>      returnValue = null;<a name="line.474"></a>
+<span class="sourceLineNo">475</span>    }<a name="line.475"></a>
+<span class="sourceLineNo">476</span>    return returnValue;<a name="line.476"></a>
+<span class="sourceLineNo">477</span>  }<a name="line.477"></a>
+<span class="sourceLineNo">478</span><a name="line.478"></a>
+<span class="sourceLineNo">479</span>  private static final &lt;T&gt; Converter&lt;T&gt; getConverterFromStaticMethod(Class&lt;?&gt; methodHostClass, final String methodName, final Class&lt;? extends CharSequence&gt; soleParameterType) {<a name="line.479"></a>
+<span class="sourceLineNo">480</span>    Objects.requireNonNull(methodHostClass);<a name="line.480"></a>
+<span class="sourceLineNo">481</span>    Objects.requireNonNull(methodName);<a name="line.481"></a>
+<span class="sourceLineNo">482</span>    Objects.requireNonNull(soleParameterType);<a name="line.482"></a>
+<span class="sourceLineNo">483</span>    if (methodHostClass.isArray()) {<a name="line.483"></a>
+<span class="sourceLineNo">484</span>      throw new IllegalArgumentException("methodHostClass.isArray(): " + methodHostClass.getName());<a name="line.484"></a>
+<span class="sourceLineNo">485</span>    } else if (methodHostClass.isPrimitive()) {<a name="line.485"></a>
+<span class="sourceLineNo">486</span>      throw new IllegalArgumentException("methodHostClass.isPrimitive(): " + methodHostClass.getName());<a name="line.486"></a>
+<span class="sourceLineNo">487</span>    }<a name="line.487"></a>
+<span class="sourceLineNo">488</span>    Converter&lt;T&gt; returnValue = null;<a name="line.488"></a>
+<span class="sourceLineNo">489</span>    final Method method;<a name="line.489"></a>
+<span class="sourceLineNo">490</span>    Method temp = null;<a name="line.490"></a>
+<span class="sourceLineNo">491</span>    try {<a name="line.491"></a>
+<span class="sourceLineNo">492</span>      temp = methodHostClass.getMethod(methodName, soleParameterType);<a name="line.492"></a>
+<span class="sourceLineNo">493</span>    } catch (final NoSuchMethodException noSuchMethodException) {<a name="line.493"></a>
+<span class="sourceLineNo">494</span><a name="line.494"></a>
+<span class="sourceLineNo">495</span>    } finally {<a name="line.495"></a>
+<span class="sourceLineNo">496</span>      method = temp;<a name="line.496"></a>
 <span class="sourceLineNo">497</span>    }<a name="line.497"></a>
-<span class="sourceLineNo">498</span>    return returnValue;<a name="line.498"></a>
-<span class="sourceLineNo">499</span>  }<a name="line.499"></a>
-<span class="sourceLineNo">500</span><a name="line.500"></a>
-<span class="sourceLineNo">501</span>  private static final &lt;T&gt; Converter&lt;T&gt; getConverterFromConstructor(Class&lt;T&gt; constructorHostClass, final Class&lt;? extends CharSequence&gt; soleParameterType) {<a name="line.501"></a>
-<span class="sourceLineNo">502</span>    Objects.requireNonNull(constructorHostClass);<a name="line.502"></a>
-<span class="sourceLineNo">503</span>    Objects.requireNonNull(soleParameterType);<a name="line.503"></a>
-<span class="sourceLineNo">504</span>    if (constructorHostClass.isPrimitive()) {<a name="line.504"></a>
-<span class="sourceLineNo">505</span>      throw new IllegalArgumentException("constructorHostClass.isPrimitive(): " + constructorHostClass.getName());<a name="line.505"></a>
-<span class="sourceLineNo">506</span>    } else if (constructorHostClass.isArray()) {<a name="line.506"></a>
-<span class="sourceLineNo">507</span>      throw new IllegalArgumentException("constructorHostClass.isArray(): " + constructorHostClass.getName());<a name="line.507"></a>
-<span class="sourceLineNo">508</span>    }<a name="line.508"></a>
-<span class="sourceLineNo">509</span><a name="line.509"></a>
-<span class="sourceLineNo">510</span>    Converter&lt;T&gt; returnValue = null;<a name="line.510"></a>
-<span class="sourceLineNo">511</span>    final Constructor&lt;T&gt; constructor;<a name="line.511"></a>
-<span class="sourceLineNo">512</span>    Constructor&lt;T&gt; temp = null;<a name="line.512"></a>
-<span class="sourceLineNo">513</span>    try {<a name="line.513"></a>
-<span class="sourceLineNo">514</span>      temp = constructorHostClass.getConstructor(soleParameterType);<a name="line.514"></a>
-<span class="sourceLineNo">515</span>    } catch (final NoSuchMethodException noSuchMethodException) {<a name="line.515"></a>
-<span class="sourceLineNo">516</span><a name="line.516"></a>
-<span class="sourceLineNo">517</span>    } finally {<a name="line.517"></a>
-<span class="sourceLineNo">518</span>      constructor = temp;<a name="line.518"></a>
-<span class="sourceLineNo">519</span>    }<a name="line.519"></a>
-<span class="sourceLineNo">520</span>    if (constructor != null) {<a name="line.520"></a>
-<span class="sourceLineNo">521</span>      returnValue = new ExecutableBasedConverter&lt;&gt;(constructor);<a name="line.521"></a>
+<span class="sourceLineNo">498</span>    if (method != null &amp;&amp; Modifier.isStatic(method.getModifiers()) &amp;&amp; methodHostClass.isAssignableFrom(method.getReturnType())) {<a name="line.498"></a>
+<span class="sourceLineNo">499</span>      returnValue = new ExecutableBasedConverter&lt;&gt;(method);<a name="line.499"></a>
+<span class="sourceLineNo">500</span>    }<a name="line.500"></a>
+<span class="sourceLineNo">501</span>    return returnValue;<a name="line.501"></a>
+<span class="sourceLineNo">502</span>  }<a name="line.502"></a>
+<span class="sourceLineNo">503</span><a name="line.503"></a>
+<span class="sourceLineNo">504</span>  private static final &lt;T&gt; Converter&lt;T&gt; getConverterFromConstructor(Class&lt;T&gt; constructorHostClass, final Class&lt;? extends CharSequence&gt; soleParameterType) {<a name="line.504"></a>
+<span class="sourceLineNo">505</span>    Objects.requireNonNull(constructorHostClass);<a name="line.505"></a>
+<span class="sourceLineNo">506</span>    Objects.requireNonNull(soleParameterType);<a name="line.506"></a>
+<span class="sourceLineNo">507</span>    if (constructorHostClass.isPrimitive()) {<a name="line.507"></a>
+<span class="sourceLineNo">508</span>      throw new IllegalArgumentException("constructorHostClass.isPrimitive(): " + constructorHostClass.getName());<a name="line.508"></a>
+<span class="sourceLineNo">509</span>    } else if (constructorHostClass.isArray()) {<a name="line.509"></a>
+<span class="sourceLineNo">510</span>      throw new IllegalArgumentException("constructorHostClass.isArray(): " + constructorHostClass.getName());<a name="line.510"></a>
+<span class="sourceLineNo">511</span>    }<a name="line.511"></a>
+<span class="sourceLineNo">512</span><a name="line.512"></a>
+<span class="sourceLineNo">513</span>    Converter&lt;T&gt; returnValue = null;<a name="line.513"></a>
+<span class="sourceLineNo">514</span>    final Constructor&lt;T&gt; constructor;<a name="line.514"></a>
+<span class="sourceLineNo">515</span>    Constructor&lt;T&gt; temp = null;<a name="line.515"></a>
+<span class="sourceLineNo">516</span>    try {<a name="line.516"></a>
+<span class="sourceLineNo">517</span>      temp = constructorHostClass.getConstructor(soleParameterType);<a name="line.517"></a>
+<span class="sourceLineNo">518</span>    } catch (final NoSuchMethodException noSuchMethodException) {<a name="line.518"></a>
+<span class="sourceLineNo">519</span><a name="line.519"></a>
+<span class="sourceLineNo">520</span>    } finally {<a name="line.520"></a>
+<span class="sourceLineNo">521</span>      constructor = temp;<a name="line.521"></a>
 <span class="sourceLineNo">522</span>    }<a name="line.522"></a>
-<span class="sourceLineNo">523</span>    return returnValue;<a name="line.523"></a>
-<span class="sourceLineNo">524</span>  }<a name="line.524"></a>
-<span class="sourceLineNo">525</span><a name="line.525"></a>
-<span class="sourceLineNo">526</span>  static final String[] split(final String text) {<a name="line.526"></a>
-<span class="sourceLineNo">527</span>    final String[] returnValue;<a name="line.527"></a>
-<span class="sourceLineNo">528</span>    if (text == null) {<a name="line.528"></a>
-<span class="sourceLineNo">529</span>      returnValue = new String[0];<a name="line.529"></a>
-<span class="sourceLineNo">530</span>    } else {<a name="line.530"></a>
-<span class="sourceLineNo">531</span>      returnValue = splitPattern.split(text);<a name="line.531"></a>
-<span class="sourceLineNo">532</span>      assert returnValue != null;<a name="line.532"></a>
-<span class="sourceLineNo">533</span>      for (int i = 0; i &lt; returnValue.length; i++) {<a name="line.533"></a>
-<span class="sourceLineNo">534</span>        returnValue[i] = backslashCommaPattern.matcher(returnValue[i]).replaceAll(",");<a name="line.534"></a>
-<span class="sourceLineNo">535</span>      }<a name="line.535"></a>
-<span class="sourceLineNo">536</span>    }<a name="line.536"></a>
-<span class="sourceLineNo">537</span>    return returnValue;<a name="line.537"></a>
-<span class="sourceLineNo">538</span>  }<a name="line.538"></a>
-<span class="sourceLineNo">539</span><a name="line.539"></a>
-<span class="sourceLineNo">540</span>  static final Map&lt;? extends Type, ? extends Converter&lt;?&gt;&gt; getDiscoveredConverters(ClassLoader classLoader) {<a name="line.540"></a>
-<span class="sourceLineNo">541</span>    if (classLoader == null) {<a name="line.541"></a>
-<span class="sourceLineNo">542</span>      classLoader = AccessController.doPrivileged((PrivilegedAction&lt;ClassLoader&gt;)() -&gt; Thread.currentThread().getContextClassLoader());<a name="line.542"></a>
-<span class="sourceLineNo">543</span>    }<a name="line.543"></a>
-<span class="sourceLineNo">544</span>    final Map&lt;Type, Converter&lt;?&gt;&gt; converters = new HashMap&lt;&gt;();<a name="line.544"></a>
-<span class="sourceLineNo">545</span>    @SuppressWarnings("rawtypes")<a name="line.545"></a>
-<span class="sourceLineNo">546</span>    final ServiceLoader&lt;Converter&gt; discoveredConverters = ServiceLoader.load(Converter.class, classLoader);<a name="line.546"></a>
-<span class="sourceLineNo">547</span>    assert discoveredConverters != null;<a name="line.547"></a>
-<span class="sourceLineNo">548</span>    for (final Converter&lt;?&gt; discoveredConverter : discoveredConverters) {<a name="line.548"></a>
-<span class="sourceLineNo">549</span>      if (discoveredConverter != null) {<a name="line.549"></a>
-<span class="sourceLineNo">550</span>        final Type conversionType = Converters.getConversionType(discoveredConverter);<a name="line.550"></a>
-<span class="sourceLineNo">551</span>        if (conversionType == null) {<a name="line.551"></a>
-<span class="sourceLineNo">552</span>          throw new IllegalStateException("Could not determine the conversion type for converter: " + discoveredConverter);<a name="line.552"></a>
-<span class="sourceLineNo">553</span>        }<a name="line.553"></a>
-<span class="sourceLineNo">554</span>        converters.put(conversionType, discoveredConverter);<a name="line.554"></a>
-<span class="sourceLineNo">555</span>      }<a name="line.555"></a>
-<span class="sourceLineNo">556</span>    }<a name="line.556"></a>
-<span class="sourceLineNo">557</span>    return Collections.unmodifiableMap(converters);<a name="line.557"></a>
-<span class="sourceLineNo">558</span>  }<a name="line.558"></a>
-<span class="sourceLineNo">559</span><a name="line.559"></a>
-<span class="sourceLineNo">560</span>  private static abstract class SerializableConverter&lt;T&gt; implements Converter&lt;T&gt;, Serializable {<a name="line.560"></a>
-<span class="sourceLineNo">561</span><a name="line.561"></a>
-<span class="sourceLineNo">562</span>    private static final long serialVersionUID = 1L;<a name="line.562"></a>
-<span class="sourceLineNo">563</span><a name="line.563"></a>
-<span class="sourceLineNo">564</span>    protected SerializableConverter() {<a name="line.564"></a>
-<span class="sourceLineNo">565</span>      super();<a name="line.565"></a>
-<span class="sourceLineNo">566</span>    }<a name="line.566"></a>
-<span class="sourceLineNo">567</span><a name="line.567"></a>
-<span class="sourceLineNo">568</span>  }<a name="line.568"></a>
-<span class="sourceLineNo">569</span><a name="line.569"></a>
-<span class="sourceLineNo">570</span>  private static final class ExecutableBasedConverter&lt;T&gt; extends SerializableConverter&lt;T&gt; {<a name="line.570"></a>
-<span class="sourceLineNo">571</span><a name="line.571"></a>
-<span class="sourceLineNo">572</span>    private static final long serialVersionUID = 1L;<a name="line.572"></a>
-<span class="sourceLineNo">573</span><a name="line.573"></a>
-<span class="sourceLineNo">574</span>    private transient Executable executable;<a name="line.574"></a>
-<span class="sourceLineNo">575</span><a name="line.575"></a>
-<span class="sourceLineNo">576</span>    private ExecutableBasedConverter(final Method method) {<a name="line.576"></a>
-<span class="sourceLineNo">577</span>      super();<a name="line.577"></a>
-<span class="sourceLineNo">578</span>      this.executable = Objects.requireNonNull(method);<a name="line.578"></a>
-<span class="sourceLineNo">579</span>      if (!Modifier.isStatic(method.getModifiers())) {<a name="line.579"></a>
-<span class="sourceLineNo">580</span>        throw new IllegalArgumentException("method is not static: " + method);<a name="line.580"></a>
-<span class="sourceLineNo">581</span>      }<a name="line.581"></a>
-<span class="sourceLineNo">582</span>    }<a name="line.582"></a>
-<span class="sourceLineNo">583</span><a name="line.583"></a>
-<span class="sourceLineNo">584</span>    private ExecutableBasedConverter(final Constructor&lt;T&gt; constructor) {<a name="line.584"></a>
-<span class="sourceLineNo">585</span>      super();<a name="line.585"></a>
-<span class="sourceLineNo">586</span>      this.executable = Objects.requireNonNull(constructor);<a name="line.586"></a>
-<span class="sourceLineNo">587</span>    }<a name="line.587"></a>
-<span class="sourceLineNo">588</span><a name="line.588"></a>
-<span class="sourceLineNo">589</span>    @Override<a name="line.589"></a>
-<span class="sourceLineNo">590</span>    public final T convert(final String rawValue) {<a name="line.590"></a>
-<span class="sourceLineNo">591</span>      final T returnValue;<a name="line.591"></a>
-<span class="sourceLineNo">592</span>      if (rawValue == null) {<a name="line.592"></a>
-<span class="sourceLineNo">593</span>        // Most valueOf(String) methods and constructors that the<a name="line.593"></a>
-<span class="sourceLineNo">594</span>        // specification intended this kludgy mechanism to handle do<a name="line.594"></a>
-<span class="sourceLineNo">595</span>        // not accept null as a value.<a name="line.595"></a>
-<span class="sourceLineNo">596</span>        returnValue = null;<a name="line.596"></a>
-<span class="sourceLineNo">597</span>      } else {<a name="line.597"></a>
-<span class="sourceLineNo">598</span>        T convertedObject = null;<a name="line.598"></a>
-<span class="sourceLineNo">599</span>        try {<a name="line.599"></a>
-<span class="sourceLineNo">600</span>          if (this.executable instanceof Method) {<a name="line.600"></a>
-<span class="sourceLineNo">601</span>            @SuppressWarnings("unchecked")<a name="line.601"></a>
-<span class="sourceLineNo">602</span>            final T invocationResult = (T)((Method)this.executable).invoke(null, rawValue);<a name="line.602"></a>
-<span class="sourceLineNo">603</span>            convertedObject = invocationResult;<a name="line.603"></a>
-<span class="sourceLineNo">604</span>          } else {<a name="line.604"></a>
-<span class="sourceLineNo">605</span>            assert this.executable instanceof Constructor;<a name="line.605"></a>
-<span class="sourceLineNo">606</span>            @SuppressWarnings("unchecked")<a name="line.606"></a>
-<span class="sourceLineNo">607</span>            final T invocationResult = ((Constructor&lt;T&gt;)this.executable).newInstance(rawValue);<a name="line.607"></a>
-<span class="sourceLineNo">608</span>            convertedObject = invocationResult;<a name="line.608"></a>
-<span class="sourceLineNo">609</span>          }<a name="line.609"></a>
-<span class="sourceLineNo">610</span>        } catch (final ReflectiveOperationException reflectiveOperationException) {<a name="line.610"></a>
-<span class="sourceLineNo">611</span>          throw new IllegalArgumentException(reflectiveOperationException.getMessage(), reflectiveOperationException);<a name="line.611"></a>
-<span class="sourceLineNo">612</span>        } finally {<a name="line.612"></a>
-<span class="sourceLineNo">613</span>          returnValue = convertedObject;<a name="line.613"></a>
-<span class="sourceLineNo">614</span>        }<a name="line.614"></a>
-<span class="sourceLineNo">615</span>      }<a name="line.615"></a>
-<span class="sourceLineNo">616</span>      return returnValue;<a name="line.616"></a>
-<span class="sourceLineNo">617</span>    }<a name="line.617"></a>
-<span class="sourceLineNo">618</span><a name="line.618"></a>
-<span class="sourceLineNo">619</span>    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {<a name="line.619"></a>
-<span class="sourceLineNo">620</span>      if (in != null) {<a name="line.620"></a>
-<span class="sourceLineNo">621</span>        in.defaultReadObject();<a name="line.621"></a>
-<span class="sourceLineNo">622</span>        final boolean constructor = in.readBoolean();<a name="line.622"></a>
-<span class="sourceLineNo">623</span>        final Class&lt;?&gt; declaringClass = (Class&lt;?&gt;)in.readObject();<a name="line.623"></a>
-<span class="sourceLineNo">624</span>        assert declaringClass != null;<a name="line.624"></a>
-<span class="sourceLineNo">625</span>        final String methodName;<a name="line.625"></a>
-<span class="sourceLineNo">626</span>        if (constructor) {<a name="line.626"></a>
-<span class="sourceLineNo">627</span>          methodName = null;<a name="line.627"></a>
-<span class="sourceLineNo">628</span>        } else {<a name="line.628"></a>
-<span class="sourceLineNo">629</span>          methodName = in.readUTF();<a name="line.629"></a>
-<span class="sourceLineNo">630</span>          assert methodName != null;<a name="line.630"></a>
-<span class="sourceLineNo">631</span>        }<a name="line.631"></a>
-<span class="sourceLineNo">632</span>        final Class&lt;?&gt;[] parameterTypes = (Class&lt;?&gt;[])in.readObject();<a name="line.632"></a>
-<span class="sourceLineNo">633</span>        assert parameterTypes != null;<a name="line.633"></a>
-<span class="sourceLineNo">634</span>        try {<a name="line.634"></a>
-<span class="sourceLineNo">635</span>          if (constructor) {<a name="line.635"></a>
-<span class="sourceLineNo">636</span>            this.executable = declaringClass.getDeclaredConstructor(parameterTypes);<a name="line.636"></a>
-<span class="sourceLineNo">637</span>          } else {<a name="line.637"></a>
-<span class="sourceLineNo">638</span>            this.executable = declaringClass.getMethod(methodName, parameterTypes);<a name="line.638"></a>
-<span class="sourceLineNo">639</span>          }<a name="line.639"></a>
-<span class="sourceLineNo">640</span>        } catch (final ReflectiveOperationException reflectiveOperationException) {<a name="line.640"></a>
-<span class="sourceLineNo">641</span>          throw new IOException(reflectiveOperationException.getMessage(), reflectiveOperationException);<a name="line.641"></a>
-<span class="sourceLineNo">642</span>        }<a name="line.642"></a>
-<span class="sourceLineNo">643</span>        assert this.executable != null;<a name="line.643"></a>
-<span class="sourceLineNo">644</span>      }<a name="line.644"></a>
-<span class="sourceLineNo">645</span>    }<a name="line.645"></a>
-<span class="sourceLineNo">646</span><a name="line.646"></a>
-<span class="sourceLineNo">647</span>    private void writeObject(final ObjectOutputStream out) throws IOException {<a name="line.647"></a>
-<span class="sourceLineNo">648</span>      if (out != null) {<a name="line.648"></a>
-<span class="sourceLineNo">649</span>        out.defaultWriteObject();<a name="line.649"></a>
-<span class="sourceLineNo">650</span>        assert this.executable != null;<a name="line.650"></a>
-<span class="sourceLineNo">651</span>        final boolean constructor = this.executable instanceof Constructor;<a name="line.651"></a>
-<span class="sourceLineNo">652</span>        out.writeBoolean(constructor); // true means Constructor<a name="line.652"></a>
-<span class="sourceLineNo">653</span>        out.writeObject(this.executable.getDeclaringClass());<a name="line.653"></a>
-<span class="sourceLineNo">654</span>        if (!constructor) {<a name="line.654"></a>
-<span class="sourceLineNo">655</span>          out.writeUTF(this.executable.getName());<a name="line.655"></a>
-<span class="sourceLineNo">656</span>        }<a name="line.656"></a>
-<span class="sourceLineNo">657</span>        out.writeObject(this.executable.getParameterTypes());<a name="line.657"></a>
-<span class="sourceLineNo">658</span>      }<a name="line.658"></a>
-<span class="sourceLineNo">659</span>    }<a name="line.659"></a>
-<span class="sourceLineNo">660</span><a name="line.660"></a>
-<span class="sourceLineNo">661</span>  }<a name="line.661"></a>
-<span class="sourceLineNo">662</span><a name="line.662"></a>
-<span class="sourceLineNo">663</span>  private static final class PropertyEditorConverter&lt;T&gt; extends SerializableConverter&lt;T&gt; {<a name="line.663"></a>
-<span class="sourceLineNo">664</span><a name="line.664"></a>
-<span class="sourceLineNo">665</span>    private static final long serialVersionUID = 1L;<a name="line.665"></a>
-<span class="sourceLineNo">666</span><a name="line.666"></a>
-<span class="sourceLineNo">667</span>    private final Class&lt;?&gt; conversionClass;<a name="line.667"></a>
-<span class="sourceLineNo">668</span><a name="line.668"></a>
-<span class="sourceLineNo">669</span>    private transient PropertyEditor editor;<a name="line.669"></a>
-<span class="sourceLineNo">670</span><a name="line.670"></a>
-<span class="sourceLineNo">671</span>    private PropertyEditorConverter(final Class&lt;?&gt; conversionClass, final PropertyEditor editor) {<a name="line.671"></a>
-<span class="sourceLineNo">672</span>      super();<a name="line.672"></a>
-<span class="sourceLineNo">673</span>      this.conversionClass = Objects.requireNonNull(conversionClass);<a name="line.673"></a>
-<span class="sourceLineNo">674</span>      if (editor == null) {<a name="line.674"></a>
-<span class="sourceLineNo">675</span>        this.editor = PropertyEditorManager.findEditor(conversionClass);<a name="line.675"></a>
-<span class="sourceLineNo">676</span>      } else {<a name="line.676"></a>
-<span class="sourceLineNo">677</span>        this.editor = editor;<a name="line.677"></a>
-<span class="sourceLineNo">678</span>      }<a name="line.678"></a>
-<span class="sourceLineNo">679</span>    }<a name="line.679"></a>
-<span class="sourceLineNo">680</span><a name="line.680"></a>
-<span class="sourceLineNo">681</span>    @Override<a name="line.681"></a>
-<span class="sourceLineNo">682</span>    public final T convert(final String rawValue) {<a name="line.682"></a>
-<span class="sourceLineNo">683</span>      if (this.editor == null) {<a name="line.683"></a>
-<span class="sourceLineNo">684</span>        throw new IllegalArgumentException("No PropertyEditor available to convert " + rawValue);<a name="line.684"></a>
-<span class="sourceLineNo">685</span>      }<a name="line.685"></a>
-<span class="sourceLineNo">686</span>      final T returnValue;<a name="line.686"></a>
-<span class="sourceLineNo">687</span>      synchronized (this.editor) {<a name="line.687"></a>
-<span class="sourceLineNo">688</span>        editor.setAsText(rawValue);<a name="line.688"></a>
-<span class="sourceLineNo">689</span>        T result = null;<a name="line.689"></a>
-<span class="sourceLineNo">690</span>        try {<a name="line.690"></a>
-<span class="sourceLineNo">691</span>          @SuppressWarnings("unchecked")<a name="line.691"></a>
-<span class="sourceLineNo">692</span>          final T temp = (T)editor.getValue();<a name="line.692"></a>
-<span class="sourceLineNo">693</span>          result = temp;<a name="line.693"></a>
-<span class="sourceLineNo">694</span>        } catch (final ClassCastException classCastException) {<a name="line.694"></a>
-<span class="sourceLineNo">695</span>          throw new IllegalArgumentException(classCastException.getMessage(), classCastException);<a name="line.695"></a>
-<span class="sourceLineNo">696</span>        } finally {<a name="line.696"></a>
-<span class="sourceLineNo">697</span>          returnValue = result;<a name="line.697"></a>
-<span class="sourceLineNo">698</span>        }<a name="line.698"></a>
-<span class="sourceLineNo">699</span>      }<a name="line.699"></a>
-<span class="sourceLineNo">700</span>      return returnValue;<a name="line.700"></a>
-<span class="sourceLineNo">701</span>    }<a name="line.701"></a>
-<span class="sourceLineNo">702</span><a name="line.702"></a>
-<span class="sourceLineNo">703</span>    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {<a name="line.703"></a>
-<span class="sourceLineNo">704</span>      if (in != null) {<a name="line.704"></a>
-<span class="sourceLineNo">705</span>        in.defaultReadObject();<a name="line.705"></a>
-<span class="sourceLineNo">706</span>        this.editor = PropertyEditorManager.findEditor(conversionClass);<a name="line.706"></a>
-<span class="sourceLineNo">707</span>      }<a name="line.707"></a>
-<span class="sourceLineNo">708</span>    }<a name="line.708"></a>
-<span class="sourceLineNo">709</span><a name="line.709"></a>
-<span class="sourceLineNo">710</span>  }<a name="line.710"></a>
-<span class="sourceLineNo">711</span><a name="line.711"></a>
-<span class="sourceLineNo">712</span>}<a name="line.712"></a>
+<span class="sourceLineNo">523</span>    if (constructor != null) {<a name="line.523"></a>
+<span class="sourceLineNo">524</span>      returnValue = new ExecutableBasedConverter&lt;&gt;(constructor);<a name="line.524"></a>
+<span class="sourceLineNo">525</span>    }<a name="line.525"></a>
+<span class="sourceLineNo">526</span>    return returnValue;<a name="line.526"></a>
+<span class="sourceLineNo">527</span>  }<a name="line.527"></a>
+<span class="sourceLineNo">528</span><a name="line.528"></a>
+<span class="sourceLineNo">529</span>  static final String[] split(final String text) {<a name="line.529"></a>
+<span class="sourceLineNo">530</span>    final String[] returnValue;<a name="line.530"></a>
+<span class="sourceLineNo">531</span>    if (text == null) {<a name="line.531"></a>
+<span class="sourceLineNo">532</span>      returnValue = new String[0];<a name="line.532"></a>
+<span class="sourceLineNo">533</span>    } else {<a name="line.533"></a>
+<span class="sourceLineNo">534</span>      returnValue = splitPattern.split(text);<a name="line.534"></a>
+<span class="sourceLineNo">535</span>      assert returnValue != null;<a name="line.535"></a>
+<span class="sourceLineNo">536</span>      for (int i = 0; i &lt; returnValue.length; i++) {<a name="line.536"></a>
+<span class="sourceLineNo">537</span>        returnValue[i] = backslashCommaPattern.matcher(returnValue[i]).replaceAll(",");<a name="line.537"></a>
+<span class="sourceLineNo">538</span>      }<a name="line.538"></a>
+<span class="sourceLineNo">539</span>    }<a name="line.539"></a>
+<span class="sourceLineNo">540</span>    return returnValue;<a name="line.540"></a>
+<span class="sourceLineNo">541</span>  }<a name="line.541"></a>
+<span class="sourceLineNo">542</span><a name="line.542"></a>
+<span class="sourceLineNo">543</span>  static final Map&lt;? extends Type, ? extends Converter&lt;?&gt;&gt; getDiscoveredConverters(ClassLoader classLoader) {<a name="line.543"></a>
+<span class="sourceLineNo">544</span>    if (classLoader == null) {<a name="line.544"></a>
+<span class="sourceLineNo">545</span>      classLoader = AccessController.doPrivileged((PrivilegedAction&lt;ClassLoader&gt;)() -&gt; Thread.currentThread().getContextClassLoader());<a name="line.545"></a>
+<span class="sourceLineNo">546</span>    }<a name="line.546"></a>
+<span class="sourceLineNo">547</span>    final Map&lt;Type, Converter&lt;?&gt;&gt; converters = new HashMap&lt;&gt;();<a name="line.547"></a>
+<span class="sourceLineNo">548</span>    @SuppressWarnings("rawtypes")<a name="line.548"></a>
+<span class="sourceLineNo">549</span>    final ServiceLoader&lt;Converter&gt; discoveredConverters = ServiceLoader.load(Converter.class, classLoader);<a name="line.549"></a>
+<span class="sourceLineNo">550</span>    assert discoveredConverters != null;<a name="line.550"></a>
+<span class="sourceLineNo">551</span>    for (final Converter&lt;?&gt; discoveredConverter : discoveredConverters) {<a name="line.551"></a>
+<span class="sourceLineNo">552</span>      if (discoveredConverter != null) {<a name="line.552"></a>
+<span class="sourceLineNo">553</span>        final Type conversionType = Converters.getConversionType(discoveredConverter);<a name="line.553"></a>
+<span class="sourceLineNo">554</span>        if (conversionType == null) {<a name="line.554"></a>
+<span class="sourceLineNo">555</span>          throw new IllegalStateException("Could not determine the conversion type for converter: " + discoveredConverter);<a name="line.555"></a>
+<span class="sourceLineNo">556</span>        }<a name="line.556"></a>
+<span class="sourceLineNo">557</span>        converters.put(conversionType, discoveredConverter);<a name="line.557"></a>
+<span class="sourceLineNo">558</span>      }<a name="line.558"></a>
+<span class="sourceLineNo">559</span>    }<a name="line.559"></a>
+<span class="sourceLineNo">560</span>    return Collections.unmodifiableMap(converters);<a name="line.560"></a>
+<span class="sourceLineNo">561</span>  }<a name="line.561"></a>
+<span class="sourceLineNo">562</span><a name="line.562"></a>
+<span class="sourceLineNo">563</span>  private static abstract class SerializableConverter&lt;T&gt; implements Converter&lt;T&gt;, Serializable {<a name="line.563"></a>
+<span class="sourceLineNo">564</span><a name="line.564"></a>
+<span class="sourceLineNo">565</span>    private static final long serialVersionUID = 1L;<a name="line.565"></a>
+<span class="sourceLineNo">566</span><a name="line.566"></a>
+<span class="sourceLineNo">567</span>    protected SerializableConverter() {<a name="line.567"></a>
+<span class="sourceLineNo">568</span>      super();<a name="line.568"></a>
+<span class="sourceLineNo">569</span>    }<a name="line.569"></a>
+<span class="sourceLineNo">570</span><a name="line.570"></a>
+<span class="sourceLineNo">571</span>  }<a name="line.571"></a>
+<span class="sourceLineNo">572</span><a name="line.572"></a>
+<span class="sourceLineNo">573</span>  private static final class ExecutableBasedConverter&lt;T&gt; extends SerializableConverter&lt;T&gt; {<a name="line.573"></a>
+<span class="sourceLineNo">574</span><a name="line.574"></a>
+<span class="sourceLineNo">575</span>    private static final long serialVersionUID = 1L;<a name="line.575"></a>
+<span class="sourceLineNo">576</span><a name="line.576"></a>
+<span class="sourceLineNo">577</span>    private transient Executable executable;<a name="line.577"></a>
+<span class="sourceLineNo">578</span><a name="line.578"></a>
+<span class="sourceLineNo">579</span>    private ExecutableBasedConverter(final Method method) {<a name="line.579"></a>
+<span class="sourceLineNo">580</span>      super();<a name="line.580"></a>
+<span class="sourceLineNo">581</span>      this.executable = Objects.requireNonNull(method);<a name="line.581"></a>
+<span class="sourceLineNo">582</span>      if (!Modifier.isStatic(method.getModifiers())) {<a name="line.582"></a>
+<span class="sourceLineNo">583</span>        throw new IllegalArgumentException("method is not static: " + method);<a name="line.583"></a>
+<span class="sourceLineNo">584</span>      }<a name="line.584"></a>
+<span class="sourceLineNo">585</span>    }<a name="line.585"></a>
+<span class="sourceLineNo">586</span><a name="line.586"></a>
+<span class="sourceLineNo">587</span>    private ExecutableBasedConverter(final Constructor&lt;T&gt; constructor) {<a name="line.587"></a>
+<span class="sourceLineNo">588</span>      super();<a name="line.588"></a>
+<span class="sourceLineNo">589</span>      this.executable = Objects.requireNonNull(constructor);<a name="line.589"></a>
+<span class="sourceLineNo">590</span>    }<a name="line.590"></a>
+<span class="sourceLineNo">591</span><a name="line.591"></a>
+<span class="sourceLineNo">592</span>    @Override<a name="line.592"></a>
+<span class="sourceLineNo">593</span>    public final T convert(final String rawValue) {<a name="line.593"></a>
+<span class="sourceLineNo">594</span>      final T returnValue;<a name="line.594"></a>
+<span class="sourceLineNo">595</span>      if (rawValue == null) {<a name="line.595"></a>
+<span class="sourceLineNo">596</span>        // Most valueOf(String) methods and constructors that the<a name="line.596"></a>
+<span class="sourceLineNo">597</span>        // specification intended this kludgy mechanism to handle do<a name="line.597"></a>
+<span class="sourceLineNo">598</span>        // not accept null as a value.<a name="line.598"></a>
+<span class="sourceLineNo">599</span>        returnValue = null;<a name="line.599"></a>
+<span class="sourceLineNo">600</span>      } else {<a name="line.600"></a>
+<span class="sourceLineNo">601</span>        T convertedObject = null;<a name="line.601"></a>
+<span class="sourceLineNo">602</span>        try {<a name="line.602"></a>
+<span class="sourceLineNo">603</span>          if (this.executable instanceof Method) {<a name="line.603"></a>
+<span class="sourceLineNo">604</span>            @SuppressWarnings("unchecked")<a name="line.604"></a>
+<span class="sourceLineNo">605</span>            final T invocationResult = (T)((Method)this.executable).invoke(null, rawValue);<a name="line.605"></a>
+<span class="sourceLineNo">606</span>            convertedObject = invocationResult;<a name="line.606"></a>
+<span class="sourceLineNo">607</span>          } else {<a name="line.607"></a>
+<span class="sourceLineNo">608</span>            assert this.executable instanceof Constructor;<a name="line.608"></a>
+<span class="sourceLineNo">609</span>            @SuppressWarnings("unchecked")<a name="line.609"></a>
+<span class="sourceLineNo">610</span>            final T invocationResult = ((Constructor&lt;T&gt;)this.executable).newInstance(rawValue);<a name="line.610"></a>
+<span class="sourceLineNo">611</span>            convertedObject = invocationResult;<a name="line.611"></a>
+<span class="sourceLineNo">612</span>          }<a name="line.612"></a>
+<span class="sourceLineNo">613</span>        } catch (final ReflectiveOperationException reflectiveOperationException) {<a name="line.613"></a>
+<span class="sourceLineNo">614</span>          throw new IllegalArgumentException(reflectiveOperationException.getMessage(), reflectiveOperationException);<a name="line.614"></a>
+<span class="sourceLineNo">615</span>        } finally {<a name="line.615"></a>
+<span class="sourceLineNo">616</span>          returnValue = convertedObject;<a name="line.616"></a>
+<span class="sourceLineNo">617</span>        }<a name="line.617"></a>
+<span class="sourceLineNo">618</span>      }<a name="line.618"></a>
+<span class="sourceLineNo">619</span>      return returnValue;<a name="line.619"></a>
+<span class="sourceLineNo">620</span>    }<a name="line.620"></a>
+<span class="sourceLineNo">621</span><a name="line.621"></a>
+<span class="sourceLineNo">622</span>    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {<a name="line.622"></a>
+<span class="sourceLineNo">623</span>      if (in != null) {<a name="line.623"></a>
+<span class="sourceLineNo">624</span>        in.defaultReadObject();<a name="line.624"></a>
+<span class="sourceLineNo">625</span>        final boolean constructor = in.readBoolean();<a name="line.625"></a>
+<span class="sourceLineNo">626</span>        final Class&lt;?&gt; declaringClass = (Class&lt;?&gt;)in.readObject();<a name="line.626"></a>
+<span class="sourceLineNo">627</span>        assert declaringClass != null;<a name="line.627"></a>
+<span class="sourceLineNo">628</span>        final String methodName;<a name="line.628"></a>
+<span class="sourceLineNo">629</span>        if (constructor) {<a name="line.629"></a>
+<span class="sourceLineNo">630</span>          methodName = null;<a name="line.630"></a>
+<span class="sourceLineNo">631</span>        } else {<a name="line.631"></a>
+<span class="sourceLineNo">632</span>          methodName = in.readUTF();<a name="line.632"></a>
+<span class="sourceLineNo">633</span>          assert methodName != null;<a name="line.633"></a>
+<span class="sourceLineNo">634</span>        }<a name="line.634"></a>
+<span class="sourceLineNo">635</span>        final Class&lt;?&gt;[] parameterTypes = (Class&lt;?&gt;[])in.readObject();<a name="line.635"></a>
+<span class="sourceLineNo">636</span>        assert parameterTypes != null;<a name="line.636"></a>
+<span class="sourceLineNo">637</span>        try {<a name="line.637"></a>
+<span class="sourceLineNo">638</span>          if (constructor) {<a name="line.638"></a>
+<span class="sourceLineNo">639</span>            this.executable = declaringClass.getDeclaredConstructor(parameterTypes);<a name="line.639"></a>
+<span class="sourceLineNo">640</span>          } else {<a name="line.640"></a>
+<span class="sourceLineNo">641</span>            this.executable = declaringClass.getMethod(methodName, parameterTypes);<a name="line.641"></a>
+<span class="sourceLineNo">642</span>          }<a name="line.642"></a>
+<span class="sourceLineNo">643</span>        } catch (final ReflectiveOperationException reflectiveOperationException) {<a name="line.643"></a>
+<span class="sourceLineNo">644</span>          throw new IOException(reflectiveOperationException.getMessage(), reflectiveOperationException);<a name="line.644"></a>
+<span class="sourceLineNo">645</span>        }<a name="line.645"></a>
+<span class="sourceLineNo">646</span>        assert this.executable != null;<a name="line.646"></a>
+<span class="sourceLineNo">647</span>      }<a name="line.647"></a>
+<span class="sourceLineNo">648</span>    }<a name="line.648"></a>
+<span class="sourceLineNo">649</span><a name="line.649"></a>
+<span class="sourceLineNo">650</span>    private void writeObject(final ObjectOutputStream out) throws IOException {<a name="line.650"></a>
+<span class="sourceLineNo">651</span>      if (out != null) {<a name="line.651"></a>
+<span class="sourceLineNo">652</span>        out.defaultWriteObject();<a name="line.652"></a>
+<span class="sourceLineNo">653</span>        assert this.executable != null;<a name="line.653"></a>
+<span class="sourceLineNo">654</span>        final boolean constructor = this.executable instanceof Constructor;<a name="line.654"></a>
+<span class="sourceLineNo">655</span>        out.writeBoolean(constructor); // true means Constructor<a name="line.655"></a>
+<span class="sourceLineNo">656</span>        out.writeObject(this.executable.getDeclaringClass());<a name="line.656"></a>
+<span class="sourceLineNo">657</span>        if (!constructor) {<a name="line.657"></a>
+<span class="sourceLineNo">658</span>          out.writeUTF(this.executable.getName());<a name="line.658"></a>
+<span class="sourceLineNo">659</span>        }<a name="line.659"></a>
+<span class="sourceLineNo">660</span>        out.writeObject(this.executable.getParameterTypes());<a name="line.660"></a>
+<span class="sourceLineNo">661</span>      }<a name="line.661"></a>
+<span class="sourceLineNo">662</span>    }<a name="line.662"></a>
+<span class="sourceLineNo">663</span><a name="line.663"></a>
+<span class="sourceLineNo">664</span>  }<a name="line.664"></a>
+<span class="sourceLineNo">665</span><a name="line.665"></a>
+<span class="sourceLineNo">666</span>  private static final class PropertyEditorConverter&lt;T&gt; extends SerializableConverter&lt;T&gt; {<a name="line.666"></a>
+<span class="sourceLineNo">667</span><a name="line.667"></a>
+<span class="sourceLineNo">668</span>    private static final long serialVersionUID = 1L;<a name="line.668"></a>
+<span class="sourceLineNo">669</span><a name="line.669"></a>
+<span class="sourceLineNo">670</span>    private final Class&lt;?&gt; conversionClass;<a name="line.670"></a>
+<span class="sourceLineNo">671</span><a name="line.671"></a>
+<span class="sourceLineNo">672</span>    private transient PropertyEditor editor;<a name="line.672"></a>
+<span class="sourceLineNo">673</span><a name="line.673"></a>
+<span class="sourceLineNo">674</span>    private PropertyEditorConverter(final Class&lt;?&gt; conversionClass, final PropertyEditor editor) {<a name="line.674"></a>
+<span class="sourceLineNo">675</span>      super();<a name="line.675"></a>
+<span class="sourceLineNo">676</span>      this.conversionClass = Objects.requireNonNull(conversionClass);<a name="line.676"></a>
+<span class="sourceLineNo">677</span>      if (editor == null) {<a name="line.677"></a>
+<span class="sourceLineNo">678</span>        this.editor = PropertyEditorManager.findEditor(conversionClass);<a name="line.678"></a>
+<span class="sourceLineNo">679</span>      } else {<a name="line.679"></a>
+<span class="sourceLineNo">680</span>        this.editor = editor;<a name="line.680"></a>
+<span class="sourceLineNo">681</span>      }<a name="line.681"></a>
+<span class="sourceLineNo">682</span>    }<a name="line.682"></a>
+<span class="sourceLineNo">683</span><a name="line.683"></a>
+<span class="sourceLineNo">684</span>    @Override<a name="line.684"></a>
+<span class="sourceLineNo">685</span>    public final T convert(final String rawValue) {<a name="line.685"></a>
+<span class="sourceLineNo">686</span>      if (this.editor == null) {<a name="line.686"></a>
+<span class="sourceLineNo">687</span>        throw new IllegalArgumentException("No PropertyEditor available to convert " + rawValue);<a name="line.687"></a>
+<span class="sourceLineNo">688</span>      }<a name="line.688"></a>
+<span class="sourceLineNo">689</span>      final T returnValue;<a name="line.689"></a>
+<span class="sourceLineNo">690</span>      synchronized (this.editor) {<a name="line.690"></a>
+<span class="sourceLineNo">691</span>        editor.setAsText(rawValue);<a name="line.691"></a>
+<span class="sourceLineNo">692</span>        T result = null;<a name="line.692"></a>
+<span class="sourceLineNo">693</span>        try {<a name="line.693"></a>
+<span class="sourceLineNo">694</span>          @SuppressWarnings("unchecked")<a name="line.694"></a>
+<span class="sourceLineNo">695</span>          final T temp = (T)editor.getValue();<a name="line.695"></a>
+<span class="sourceLineNo">696</span>          result = temp;<a name="line.696"></a>
+<span class="sourceLineNo">697</span>        } catch (final ClassCastException classCastException) {<a name="line.697"></a>
+<span class="sourceLineNo">698</span>          throw new IllegalArgumentException(classCastException.getMessage(), classCastException);<a name="line.698"></a>
+<span class="sourceLineNo">699</span>        } finally {<a name="line.699"></a>
+<span class="sourceLineNo">700</span>          returnValue = result;<a name="line.700"></a>
+<span class="sourceLineNo">701</span>        }<a name="line.701"></a>
+<span class="sourceLineNo">702</span>      }<a name="line.702"></a>
+<span class="sourceLineNo">703</span>      return returnValue;<a name="line.703"></a>
+<span class="sourceLineNo">704</span>    }<a name="line.704"></a>
+<span class="sourceLineNo">705</span><a name="line.705"></a>
+<span class="sourceLineNo">706</span>    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {<a name="line.706"></a>
+<span class="sourceLineNo">707</span>      if (in != null) {<a name="line.707"></a>
+<span class="sourceLineNo">708</span>        in.defaultReadObject();<a name="line.708"></a>
+<span class="sourceLineNo">709</span>        this.editor = PropertyEditorManager.findEditor(conversionClass);<a name="line.709"></a>
+<span class="sourceLineNo">710</span>      }<a name="line.710"></a>
+<span class="sourceLineNo">711</span>    }<a name="line.711"></a>
+<span class="sourceLineNo">712</span><a name="line.712"></a>
+<span class="sourceLineNo">713</span>  }<a name="line.713"></a>
+<span class="sourceLineNo">714</span><a name="line.714"></a>
+<span class="sourceLineNo">715</span>}<a name="line.715"></a>
 
 
 

@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018­2019 microBean.
+ * Copyright © 2018­2019 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,28 +57,48 @@ final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
 
   private final String id;
   
-  private final Type type;
-  
   private final Set<Type> types;
 
   private final Set<Annotation> qualifiers;
 
   private final Annotation[] configQualifiers;
 
-  ConfigPropertyBean(final Type type, final Set<Annotation> qualifiers) {
+  ConfigPropertyBean(final Type type, final Set<? extends Annotation> qualifiers) {
+    this(type == null ? null : Collections.singleton(type), qualifiers);
+  }
+  
+  ConfigPropertyBean(final Set<? extends Type> types, final Set<? extends Annotation> qualifiers) {
     super();
-    this.type = Objects.requireNonNull(type);
-    this.types = Collections.singleton(type);
-    if (qualifiers == null) {
+    if (types == null || types.isEmpty()) {
+      this.types = Collections.emptySet();
+    } else {
+      this.types = Collections.unmodifiableSet(new HashSet<>(types));
+    }
+    final Set<Annotation> newQualifiers = new HashSet<>();
+    newQualifiers.add(AnyLiteral.INSTANCE);
+    if (qualifiers == null || qualifiers.isEmpty()) {
       // ConfigProperty elements are @Nonbinding
-      this.qualifiers = Collections.singleton(new ConfigPropertyLiteral());
+      newQualifiers.add(ConfigPropertyLiteral.INSTANCE);
+      newQualifiers.add(DefaultLiteral.INSTANCE);
       this.configQualifiers = null;
     } else {
-      this.qualifiers = qualifiers;
       final Set<Annotation> configQualifiers = new HashSet<>(qualifiers);
-      configQualifiers.removeIf(q -> q instanceof ConfigProperty);
+      newQualifiers.addAll(qualifiers);
+      boolean found = false;
+      for (final Annotation qualifier : qualifiers) {
+        if (qualifier instanceof ConfigProperty) {
+          found = true;
+          configQualifiers.removeIf(q -> q instanceof ConfigProperty);
+          break;
+        }
+      }
+      if (!found) {
+        // ConfigProperty elements are @Nonbinding
+        newQualifiers.add(ConfigPropertyLiteral.INSTANCE);
+      }
       this.configQualifiers = configQualifiers.toArray(new Annotation[configQualifiers.size()]);
     }
+    this.qualifiers = Collections.unmodifiableSet(newQualifiers);
     this.id = new StringBuilder(this.getClass().getName()).append(";t:").append(this.getTypes()).append(";q:").append(this.getQualifiers()).toString();
   }
   
@@ -118,7 +138,7 @@ final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
       }
       typeConverter = (TypeConverter)beanManager.getReference(beanManager.resolve(typeConverterBeans), TypeConverter.class, context);
     }
-    final T returnValue = typeConverter.convert(value == null ? getDefaultValue(currentInjectionPoint) : value, this.type);
+    final T returnValue = typeConverter.convert(value == null ? getDefaultValue(currentInjectionPoint) : value, currentInjectionPoint.getType());
     return returnValue;
   }
 
@@ -245,6 +265,8 @@ final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
 
     private static final long serialVersionUID = 1L;
 
+    private static final ConfigProperty INSTANCE = new ConfigPropertyLiteral();
+    
     private ConfigPropertyLiteral() {
       super();
     }

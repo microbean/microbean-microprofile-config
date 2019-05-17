@@ -39,8 +39,6 @@ import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.InjectionPoint;
 import javax.enterprise.inject.spi.PassivationCapable;
 
-import javax.enterprise.util.AnnotationLiteral;
-
 import org.eclipse.microprofile.config.Config;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -213,6 +211,11 @@ final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
     return this.id;
   }
 
+  @Override
+  public String toString() {
+    return this.getId();
+  }
+
   private static final String getDefaultValue(final InjectionPoint injectionPoint) {
     Objects.requireNonNull(injectionPoint);
 
@@ -261,27 +264,6 @@ final class ConfigPropertyBean<T> implements Bean<T>, PassivationCapable {
     return returnValue;
   }
   
-  private static final class ConfigPropertyLiteral extends AnnotationLiteral<ConfigProperty> implements ConfigProperty {
-
-    private static final long serialVersionUID = 1L;
-
-    private static final ConfigProperty INSTANCE = new ConfigPropertyLiteral();
-    
-    private ConfigPropertyLiteral() {
-      super();
-    }
-    
-    @Override
-    public final String name() {
-      return "";
-    }
-    
-    @Override
-    public final String defaultValue() {
-      return "";
-    }
-  }
-
   private static final class CurrentInjectionPoint implements InjectionPoint {
 
     private final Type type;

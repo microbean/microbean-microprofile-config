@@ -24,8 +24,10 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -66,30 +68,19 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
  */
 public final class ConfigExtension implements Extension {
 
-  private static final Map<Class<?>, Class<?>> wrapperClasses;
+  private final Map<Set<Annotation>, Set<Type>> configPropertyTypes;
 
-  static {
-    wrapperClasses = new HashMap<>();
-    wrapperClasses.put(boolean.class, Boolean.class);
-    wrapperClasses.put(byte.class, Byte.class);
-    wrapperClasses.put(char.class, Character.class);
-    wrapperClasses.put(double.class, Double.class);
-    wrapperClasses.put(float.class, Float.class);
-    wrapperClasses.put(int.class, Integer.class);
-    wrapperClasses.put(long.class, Long.class);
-    wrapperClasses.put(short.class, Short.class);
-  }
-
-  private final Map<Set<Annotation>, Set<InjectionPoint>> configPropertyInjectionPoints;
+  private final Set<InjectionPoint> configPropertyInjectionPointsToValidate;
 
   private final Set<Set<Annotation>> allConfigQualifiers;
-  
+
   /**
    * Creates a new {@link ConfigExtension}.
    */
   public ConfigExtension() {
     super();
-    this.configPropertyInjectionPoints = new HashMap<>();
+    this.configPropertyInjectionPointsToValidate = new HashSet<>();
+    this.configPropertyTypes = new HashMap<>();
     this.allConfigQualifiers = new HashSet<>();
   }
 
@@ -102,22 +93,32 @@ public final class ConfigExtension implements Extension {
           for (final InjectionPoint beanInjectionPoint : beanInjectionPoints) {
             if (beanInjectionPoint != null) {
               final Set<Annotation> qualifiers = beanInjectionPoint.getQualifiers();
+              assert qualifiers != null;
               final Type type = beanInjectionPoint.getType();
+              assert type != null;
               if (Config.class.equals(type)) {
                 if (qualifiers != null && !qualifiers.isEmpty()) {
                   final Set<Annotation> configQualifiers = new HashSet<>(qualifiers);
+                  if (configQualifiers.removeIf(q -> q instanceof ConfigProperty)) {
+                    configQualifiers.add(ConfigPropertyLiteral.INSTANCE);
+                  }
                   configQualifiers.add(AnyLiteral.INSTANCE);
                   allConfigQualifiers.add(configQualifiers);
                 }
               } else {
                 final Annotated annotated = beanInjectionPoint.getAnnotated();
                 if (annotated != null && annotated.isAnnotationPresent(ConfigProperty.class)) {
-                  Set<InjectionPoint> configPropertyInjectionPoints = this.configPropertyInjectionPoints.get(qualifiers);
-                  if (configPropertyInjectionPoints == null) {
-                    configPropertyInjectionPoints = new HashSet<>();
-                    this.configPropertyInjectionPoints.put(qualifiers, configPropertyInjectionPoints);
+                  this.configPropertyInjectionPointsToValidate.add(beanInjectionPoint);
+                  Set<Annotation> configPropertyQualifiers = new HashSet<>(qualifiers);
+                  configPropertyQualifiers.removeIf(q -> q instanceof ConfigProperty);
+                  configPropertyQualifiers.add(ConfigPropertyLiteral.INSTANCE);
+                  configPropertyQualifiers = Collections.unmodifiableSet(configPropertyQualifiers);
+                  Set<Type> configPropertyTypes = this.configPropertyTypes.get(configPropertyQualifiers);
+                  if (configPropertyTypes == null) {
+                    configPropertyTypes = new HashSet<>();
+                    this.configPropertyTypes.put(configPropertyQualifiers, configPropertyTypes);
                   }
-                  configPropertyInjectionPoints.add(beanInjectionPoint);
+                  configPropertyTypes.add(type);
                 }
               }
             }
@@ -141,20 +142,29 @@ public final class ConfigExtension implements Extension {
                   !annotatedParameter.isAnnotationPresent(Observes.class)) {
                 final InjectionPoint injectionPoint = beanManager.createInjectionPoint(annotatedParameter);
                 assert injectionPoint != null;
+                final Type type = injectionPoint.getType();
                 final Set<Annotation> qualifiers = injectionPoint.getQualifiers();
-                if (Config.class.equals(injectionPoint.getType())) {
+                if (Config.class.equals(type)) {
                   if (qualifiers != null && !qualifiers.isEmpty()) {
                     final Set<Annotation> configQualifiers = new HashSet<>(qualifiers);
+                    if (configQualifiers.removeIf(q -> q instanceof ConfigProperty)) {
+                      configQualifiers.add(ConfigPropertyLiteral.INSTANCE);
+                    }
                     configQualifiers.add(AnyLiteral.INSTANCE);
-                    allConfigQualifiers.add(configQualifiers);
+                    allConfigQualifiers.add(Collections.unmodifiableSet(configQualifiers));
                   }
                 } else if (annotatedParameter.isAnnotationPresent(ConfigProperty.class)) {
-                  Set<InjectionPoint> configPropertyInjectionPoints = this.configPropertyInjectionPoints.get(qualifiers);
-                  if (configPropertyInjectionPoints == null) {
-                    configPropertyInjectionPoints = new HashSet<>();
-                    this.configPropertyInjectionPoints.put(qualifiers, configPropertyInjectionPoints);
+                  this.configPropertyInjectionPointsToValidate.add(injectionPoint);
+                  Set<Annotation> configPropertyQualifiers = new HashSet<>(qualifiers);
+                  configPropertyQualifiers.removeIf(q -> q instanceof ConfigProperty);
+                  configPropertyQualifiers.add(ConfigPropertyLiteral.INSTANCE);
+                  configPropertyQualifiers = Collections.unmodifiableSet(configPropertyQualifiers);
+                  Set<Type> configPropertyTypes = this.configPropertyTypes.get(configPropertyQualifiers);
+                  if (configPropertyTypes == null) {
+                    configPropertyTypes = new HashSet<>();
+                    this.configPropertyTypes.put(configPropertyQualifiers, configPropertyTypes);
                   }
-                  configPropertyInjectionPoints.add(injectionPoint);
+                  configPropertyTypes.add(type);
                 }
               }
             }
@@ -175,32 +185,31 @@ public final class ConfigExtension implements Extension {
       defaultConfigQualifiers.add(AnyLiteral.INSTANCE);
       defaultConfigQualifiers.add(DefaultLiteral.INSTANCE);
       this.allConfigQualifiers.add(defaultConfigQualifiers);
-      
-      if (!this.configPropertyInjectionPoints.isEmpty()) {
 
-        final Set<Type> types = new HashSet<>();
-        final Set<Entry<Set<Annotation>, Set<InjectionPoint>>> entrySet = this.configPropertyInjectionPoints.entrySet();
+      if (!this.configPropertyTypes.isEmpty()) {
+        final Set<Entry<Set<Annotation>, Set<Type>>> entrySet = this.configPropertyTypes.entrySet();
         assert entrySet != null;
         assert !entrySet.isEmpty();
-        for (final Entry<Set<Annotation>, Set<InjectionPoint>> entry : entrySet) {
+        for (final Entry<Set<Annotation>, Set<Type>> entry : entrySet) {
           assert entry != null;
           final Set<Annotation> qualifiers = entry.getKey();
-          final Set<InjectionPoint> configPropertyInjectionPoints = entry.getValue();
-          assert configPropertyInjectionPoints != null;
-          for (final InjectionPoint injectionPoint : configPropertyInjectionPoints) {
-            assert injectionPoint != null;
-            Type type = injectionPoint.getType();
+          assert qualifiers != null;
+          final Set<Type> types = entry.getValue();
+          assert types != null;
+          final Set<Type> newTypes = new HashSet<>(types);
+          final Iterator<Type> iterator = newTypes.iterator();
+          assert iterator != null;
+          while (iterator.hasNext()) {
+            final Type type = iterator.next();
             assert type != null;
-            if (type instanceof Class && ((Class<?>)type).isPrimitive()) {
-              type = wrapperClasses.get(type);
-              assert type != null;
-            }
-            if (types.add(type) && noBeans(beanManager, type, qualifiers)) {
-              event.addBean(new ConfigPropertyBean<>(type, qualifiers));
+            if (!noBeans(beanManager, type, qualifiers)) {
+              // A user-supplied bean is already present for the type
+              // and qualifiers so don't install a default bean.
+              iterator.remove();
             }
           }
+          event.addBean(new ConfigPropertyBean<>(newTypes, qualifiers));
         }
-        types.clear();
       }
 
       for (final Set<Annotation> configQualifiers : this.allConfigQualifiers) {
@@ -218,26 +227,19 @@ public final class ConfigExtension implements Extension {
     if (event != null && beanManager != null) {
       final CreationalContext<?> cc = beanManager.createCreationalContext(null);
       try {
-        final Set<Entry<Set<Annotation>, Set<InjectionPoint>>> entrySet = this.configPropertyInjectionPoints.entrySet();
-        assert entrySet != null;
-        for (final Entry<Set<Annotation>, Set<InjectionPoint>> entry : entrySet) {
-          assert entry != null;
-          final Set<Annotation> qualifiers = entry.getKey();
-          final Set<InjectionPoint> configPropertyInjectionPoints = entry.getValue();
-          assert configPropertyInjectionPoints != null;
-          for (final InjectionPoint injectionPoint : configPropertyInjectionPoints) {
-            assert injectionPoint != null;
-            if (beanManager.getInjectableReference(injectionPoint, cc) == null) {
-              event.addDeploymentProblem(new DeploymentException("No value exists for the mandatory configuration property named " +
-                                                                 getConfigPropertyName(injectionPoint)));
-            }
+        for (final InjectionPoint injectionPoint : this.configPropertyInjectionPointsToValidate) {
+          assert injectionPoint != null;
+          if (beanManager.getInjectableReference(injectionPoint, cc) == null) {
+            event.addDeploymentProblem(new DeploymentException("No value exists for the mandatory configuration property named " +
+                                                               getConfigPropertyName(injectionPoint)));
           }
         }
       } finally {
         cc.release();
       }
     }
-    this.configPropertyInjectionPoints.clear();
+    this.configPropertyInjectionPointsToValidate.clear();
+    this.configPropertyTypes.clear();
   }
 
   private static final boolean noBeans(final BeanManager beanManager, final Type type, final Set<Annotation> qualifiers) {

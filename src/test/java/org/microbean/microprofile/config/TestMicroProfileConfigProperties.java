@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -46,11 +47,13 @@ public class TestMicroProfileConfigProperties {
   @Test
   public void testGet() {
     assertNotNull(System.getProperty("java.home"));
+    assertEquals("frood", System.getProperty("hoopy"));
   }
   
   @Test
   public void testSystemPropertiesBehavior() {
     final Properties properties = System.getProperties();
+    assertTrue(properties instanceof MicroProfileConfigProperties);
     assertTrue(properties.containsKey("java.home"));
   }
   

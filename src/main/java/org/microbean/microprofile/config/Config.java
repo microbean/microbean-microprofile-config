@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018–2019 microBean.
+ * Copyright © 2018–2019 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -682,7 +682,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
     if (classLoader == null) {
       classLoader = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)() -> Thread.currentThread().getContextClassLoader());
     }
-    final Enumeration<? extends URL> urls = classLoader.getResources("/META-INF/microprofile-config.properties");
+    final Enumeration<? extends URL> urls = classLoader.getResources("META-INF/microprofile-config.properties");
     Collection<ConfigSource> returnValue = new ArrayList<>();
     if (urls != null) {
       while (urls.hasMoreElements()) {

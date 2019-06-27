@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019 microBean.
+ * Copyright © 2019 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,11 +87,23 @@ import org.eclipse.microprofile.config.ConfigProvider;
  */
 public class MicroProfileConfigProperties extends Properties {
 
+
+  /*
+   * Static fields.
+   */
+
+
   /**
    * The version of this class for {@linkplain Serializable
    * serialization} purposes.
    */
   private static final long serialVersionUID = 1L;
+
+
+  /*
+   * Instance fields.
+   */
+
 
   /**
    * The {@link Config} providing configuration property values.
@@ -109,6 +121,12 @@ public class MicroProfileConfigProperties extends Properties {
    */
   // @GuardedBy("this")
   private boolean iterating;
+
+
+  /*
+   * Constructors.
+   */
+
 
   /**
    * Creates a new {@link MicroProfileConfigProperties} representing
@@ -170,6 +188,12 @@ public class MicroProfileConfigProperties extends Properties {
     super(defaults);
     this.config = config == null ? ConfigProvider.getConfig() : config;
   }
+
+
+  /*
+   * Instance methods.
+   */
+
 
   /**
    * Returns {@code true} if this {@link MicroProfileConfigProperties}
@@ -275,7 +299,7 @@ public class MicroProfileConfigProperties extends Properties {
   @Override
   public synchronized final boolean containsValue(final Object value) {
     boolean returnValue = super.containsValue(value);
-    if (!super.containsValue(value)) {
+    if (!returnValue) {
       final Iterable<? extends String> propertyNames = this.config.getPropertyNames();
       if (propertyNames == null) {
         returnValue = false;
@@ -292,6 +316,48 @@ public class MicroProfileConfigProperties extends Properties {
     return returnValue;
   }
 
+  /**
+   * Returns the {@link String} value indexed under the supplied
+   * {@code key}.
+   *
+   * <p>This method may return {@code null}.</p>
+   *
+   * <p>This implementation first calls {@link #get(Object)}.  If the
+   * result is a non-{@code null} {@link String}, then it is returned.
+   * Otherwise, if the {@link #defaults} field is non-{@code null},
+   * then {@link Properties#getProperty(String)} is invoked on it with
+   * the supplied {@code key} and the result is returned.  In all
+   * other cases {@code null} is returned.</p>
+   *
+   * <h2>Thread Safety</h2>
+   *
+   * <p>This method is safe for concurrent use by multiple
+   * threads.</p>
+   *
+   * @param key the key of the value to return; may be {@code null}
+   *
+   * @return an appropriate value, or {@code null}
+   *
+   * @see #get(Object)
+   *
+   * @see #defaults
+   *
+   * @see Properties#getProperty(String)
+   */
+  @Override
+  public synchronized final String getProperty(final String key) {
+    final String returnValue;
+    final Object propertyValue = this.get(key);
+    if (propertyValue instanceof String) {
+      returnValue = (String)propertyValue;
+    } else if (this.defaults != null) {
+      returnValue = this.defaults.getProperty(key);
+    } else {
+      returnValue = null;
+    }
+    return returnValue;
+  }
+  
   /**
    * Returns the value indexed under the supplied {@code key}, or
    * {@code null} if the value does not exist.  Note that a {@code
@@ -328,14 +394,19 @@ public class MicroProfileConfigProperties extends Properties {
   @Override
   public synchronized final Object get(final Object key) {
     final Object returnValue;
-    if (super.containsKey(key)) {
+    if (super.containsKey(key) || this.iterating) {
       returnValue = super.get(key);
     } else {
-      final Optional<String> configValue = this.config.getOptionalValue(key.toString(), String.class);
-      if (configValue == null || !configValue.isPresent()) {
-        returnValue = null;
-      } else {
-        returnValue = configValue.get();
+      this.iterating = true;
+      try {
+        final Optional<String> configValue = this.config.getOptionalValue(key.toString(), String.class);
+        if (configValue == null || !configValue.isPresent()) {
+          returnValue = null;
+        } else {
+          returnValue = configValue.get();
+        }
+      } finally {
+        iterating = false;
       }
     }
     return returnValue;
@@ -413,14 +484,7 @@ public class MicroProfileConfigProperties extends Properties {
    */
   @Override
   public synchronized final int size() {
-    final int returnValue;
-    final Set<?> keySet = this.keySet();
-    if (keySet == null) {
-      returnValue = 0;
-    } else {
-      returnValue = keySet.size();
-    }
-    return returnValue;
+    return this.keySet().size();
   }
 
   /**
@@ -631,7 +695,7 @@ public class MicroProfileConfigProperties extends Properties {
   public synchronized final Set<Entry<Object, Object>> entrySet() {
     final Set<Entry<Object, Object>> returnValue;
     final Set<Object> keySet = this.keySet();
-    if (keySet == null || keySet.isEmpty()) {
+    if (keySet.isEmpty()) {
       returnValue = Collections.emptySet();
     } else {
       final Set<Entry<Object, Object>> entrySet = new LinkedHashSet<>();
@@ -642,6 +706,12 @@ public class MicroProfileConfigProperties extends Properties {
     }
     return returnValue;
   }
+
+
+  /*
+   * Static methods.
+   */
+
 
   /**
    * Installs an instance of {@link MicroProfileConfigProperties}
@@ -671,7 +741,7 @@ public class MicroProfileConfigProperties extends Properties {
   /*
    * Inner and nested classes.
    */
-  
+
 
   private static final class IteratorEnumeration<T> implements Enumeration<T>, Iterator<T> {
 
@@ -682,7 +752,7 @@ public class MicroProfileConfigProperties extends Properties {
     private IteratorEnumeration(final Iterable<? extends T> iterable) {
       this(iterable == null ? (Iterator<? extends T>)null : iterable.iterator());
     }
-    
+
     private IteratorEnumeration(final Iterator<? extends T> iterator) {
       super();
       this.iterator = iterator;
@@ -715,7 +785,7 @@ public class MicroProfileConfigProperties extends Properties {
         return this.enumeration.nextElement();
       }
     }
-    
+
     @Override
     public final boolean hasNext() {
       if (this.iterator == null) {
@@ -745,7 +815,7 @@ public class MicroProfileConfigProperties extends Properties {
         this.iterator.remove();
       }
     }
-    
+
   }
-  
+
 }

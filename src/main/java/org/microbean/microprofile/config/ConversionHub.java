@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2019 microBean.
+ * Copyright © 2019 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
    *
    * <h2>Thread Safety</h2>
    *
-   * <p><strong>{@code converters} will be sychronized on and iterated
+   * <p><strong>{@code converters} will be synchronized on and iterated
    * over by this constructor</strong>, which may have implications on
    * the type of {@link Map} supplied.</p>
    *
@@ -253,7 +253,7 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
    * resulting from invocations this method should be assignable to
    * references of this type
    *
-   * @return the converted object
+   * @return the converted object, which may be {@code null}
    *
    * @exception IllegalArgumentException if conversion could not occur
    * for any reason

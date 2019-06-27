@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018–2019 microBean.
+ * Copyright © 2018–2019 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import java.lang.reflect.Type;
  *
  * @see #convert(String, Type)
  */
+@FunctionalInterface
 public interface TypeConverter {
 
   /**
@@ -48,7 +49,7 @@ public interface TypeConverter {
    * resulting from invocations of implementations of this method
    * should be assignable to references of this type
    *
-   * @return the converted object
+   * @return the converted object, which may be {@code null}
    *
    * @exception NullPointerException if {@code type} is {@code null}
    *

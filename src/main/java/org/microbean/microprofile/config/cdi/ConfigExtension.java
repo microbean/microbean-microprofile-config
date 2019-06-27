@@ -97,7 +97,7 @@ public final class ConfigExtension implements Extension {
               final Type type = beanInjectionPoint.getType();
               assert type != null;
               if (Config.class.equals(type)) {
-                if (qualifiers != null && !qualifiers.isEmpty()) {
+                if (!qualifiers.isEmpty()) {
                   final Set<Annotation> configQualifiers = new HashSet<>(qualifiers);
                   if (configQualifiers.removeIf(q -> q instanceof ConfigProperty)) {
                     configQualifiers.add(ConfigPropertyLiteral.INSTANCE);

@@ -131,41 +131,38 @@ public final class ConfigExtension implements Extension {
   private final <T, X> void processObserverMethod(@Observes final ProcessObserverMethod<T, X> event,
                                                   final BeanManager beanManager) {
     if (event != null && beanManager != null) {
-      final ObserverMethod<T> observerMethod = event.getObserverMethod();
-      if (observerMethod != null) {
-        final AnnotatedMethod<X> annotatedMethod = event.getAnnotatedMethod();
-        if (annotatedMethod != null) {
-          final List<AnnotatedParameter<X>> annotatedParameters = annotatedMethod.getParameters();
-          if (annotatedParameters != null && annotatedParameters.size() > 1) {
-            for (final AnnotatedParameter<X> annotatedParameter : annotatedParameters) {
-              if (annotatedParameter != null &&
-                  !annotatedParameter.isAnnotationPresent(Observes.class)) {
-                final InjectionPoint injectionPoint = beanManager.createInjectionPoint(annotatedParameter);
-                assert injectionPoint != null;
-                final Type type = injectionPoint.getType();
-                final Set<Annotation> qualifiers = injectionPoint.getQualifiers();
-                if (Config.class.equals(type)) {
-                  if (qualifiers != null && !qualifiers.isEmpty()) {
-                    final Set<Annotation> configQualifiers = new HashSet<>(qualifiers);
-                    if (configQualifiers.removeIf(q -> q instanceof ConfigProperty)) {
-                      configQualifiers.add(ConfigPropertyLiteral.INSTANCE);
-                    }
-                    configQualifiers.add(AnyLiteral.INSTANCE);
-                    allConfigQualifiers.add(Collections.unmodifiableSet(configQualifiers));
+      final AnnotatedMethod<X> annotatedMethod = event.getAnnotatedMethod();
+      if (annotatedMethod != null) {
+        final List<AnnotatedParameter<X>> annotatedParameters = annotatedMethod.getParameters();
+        if (annotatedParameters != null && annotatedParameters.size() > 1) {
+          for (final AnnotatedParameter<X> annotatedParameter : annotatedParameters) {
+            if (annotatedParameter != null &&
+                !annotatedParameter.isAnnotationPresent(Observes.class)) {
+              final InjectionPoint injectionPoint = beanManager.createInjectionPoint(annotatedParameter);
+              assert injectionPoint != null;
+              final Type type = injectionPoint.getType();
+              final Set<Annotation> qualifiers = injectionPoint.getQualifiers();
+              if (Config.class.equals(type)) {
+                if (qualifiers != null && !qualifiers.isEmpty()) {
+                  final Set<Annotation> configQualifiers = new HashSet<>(qualifiers);
+                  if (configQualifiers.removeIf(q -> q instanceof ConfigProperty)) {
+                    configQualifiers.add(ConfigPropertyLiteral.INSTANCE);
                   }
-                } else if (annotatedParameter.isAnnotationPresent(ConfigProperty.class)) {
-                  this.configPropertyInjectionPointsToValidate.add(injectionPoint);
-                  Set<Annotation> configPropertyQualifiers = new HashSet<>(qualifiers);
-                  configPropertyQualifiers.removeIf(q -> q instanceof ConfigProperty);
-                  configPropertyQualifiers.add(ConfigPropertyLiteral.INSTANCE);
-                  configPropertyQualifiers = Collections.unmodifiableSet(configPropertyQualifiers);
-                  Set<Type> configPropertyTypes = this.configPropertyTypes.get(configPropertyQualifiers);
-                  if (configPropertyTypes == null) {
-                    configPropertyTypes = new HashSet<>();
-                    this.configPropertyTypes.put(configPropertyQualifiers, configPropertyTypes);
-                  }
-                  configPropertyTypes.add(type);
+                  configQualifiers.add(AnyLiteral.INSTANCE);
+                  allConfigQualifiers.add(Collections.unmodifiableSet(configQualifiers));
                 }
+              } else if (annotatedParameter.isAnnotationPresent(ConfigProperty.class)) {
+                this.configPropertyInjectionPointsToValidate.add(injectionPoint);
+                Set<Annotation> configPropertyQualifiers = new HashSet<>(qualifiers);
+                configPropertyQualifiers.removeIf(q -> q instanceof ConfigProperty);
+                configPropertyQualifiers.add(ConfigPropertyLiteral.INSTANCE);
+                configPropertyQualifiers = Collections.unmodifiableSet(configPropertyQualifiers);
+                Set<Type> configPropertyTypes = this.configPropertyTypes.get(configPropertyQualifiers);
+                if (configPropertyTypes == null) {
+                  configPropertyTypes = new HashSet<>();
+                  this.configPropertyTypes.put(configPropertyQualifiers, configPropertyTypes);
+                }
+                configPropertyTypes.add(type);
               }
             }
           }

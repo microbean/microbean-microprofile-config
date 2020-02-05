@@ -89,6 +89,8 @@ public class TestConverters {
 
   private static final class OrdinaryConverter implements Converter<String> {
 
+    private static final long serialVersionUID = 1L;
+    
     @Override
     public final String convert(final String rawValue) {
       return rawValue;

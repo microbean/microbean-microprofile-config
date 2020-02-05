@@ -24,6 +24,8 @@ import org.eclipse.microprofile.config.spi.Converter;
 
 final class PrioritizedConverter<T> implements Converter<T> {
 
+  private static final long serialVersionUID = 1L;
+  
   private final Converter<T> delegate;
 
   private final Type conversionType;

@@ -317,6 +317,20 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
           }
         };
 
+    } else if (Character.class.equals(conversionType) || char.class.equals(conversionType)) {
+      returnValue = new SerializableConverter<T>() {
+          private static final long serialVersionUID = 1L;
+          @Override
+          public final T convert(final String rawValue) {
+            if (rawValue == null || rawValue.isEmpty()) {
+              return null;
+            } else if (rawValue.length() != 1) {
+              throw new IllegalArgumentException("Unexpected length for character conversion: " + rawValue);
+            }
+            return (T)Character.valueOf(rawValue.charAt(0));
+          }
+        };
+
     } else if (URL.class.equals(conversionType)) {
       returnValue = new SerializableConverter<T>() {
           private static final long serialVersionUID = 1L;
@@ -449,13 +463,13 @@ public class ConversionHub implements Closeable, Serializable, TypeConverter {
             if (returnValue == null) {
               returnValue = getConverterFromStaticMethod(cls, "valueOf", CharSequence.class);
               if (returnValue == null) {
-                returnValue = getConverterFromConstructor((Class<T>)cls, String.class);
+                returnValue = getConverterFromStaticMethod(cls, "parse", String.class);
                 if (returnValue == null) {
-                  returnValue = getConverterFromConstructor((Class<T>)cls, CharSequence.class);
+                  returnValue = getConverterFromStaticMethod(cls, "parse", CharSequence.class);
                   if (returnValue == null) {
-                    returnValue = getConverterFromStaticMethod(cls, "parse", String.class);
+                    returnValue = getConverterFromConstructor((Class<T>)cls, String.class);
                     if (returnValue == null) {
-                      returnValue = getConverterFromStaticMethod(cls, "parse", CharSequence.class);
+                      returnValue = getConverterFromConstructor((Class<T>)cls, CharSequence.class);
                       if (returnValue == null) {
                         final PropertyEditor editor = PropertyEditorManager.findEditor(cls);
                         if (editor != null) {

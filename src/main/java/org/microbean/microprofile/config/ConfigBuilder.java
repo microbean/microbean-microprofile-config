@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018­2019 microBean™.
+ * Copyright © 2018­2020 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
   private final Collection<ConfigSource> sources;
 
   private volatile ClassLoader classLoader;
-  
+
   ConfigBuilder() {
     super();
     this.converters = new LinkedList<>();
@@ -93,7 +93,7 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
     }
 
     ClassLoader classLoader = null;
-    
+
     if (this.addDiscoveredSources) {
       classLoader = this.classLoader;
       if (sources == null) {
@@ -101,14 +101,19 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
       }
       sources.addAll(org.microbean.microprofile.config.Config.getDiscoveredConfigSources(classLoader));
     }
-    
-    if (sources != null) {
-      synchronized (this.sources) {
+
+    synchronized (this.sources) {
+      if (!this.sources.isEmpty()) {
+        if (sources == null) {
+          sources = new LinkedList<>();
+        }
         sources.addAll(this.sources);
-        Collections.sort(sources, ConfigSourceComparator.INSTANCE);
       }
     }
-    
+    if (sources != null) {
+      Collections.sort(sources, ConfigSourceComparator.INSTANCE);
+    }
+
     final Map<Type, Converter<?>> converters = new HashMap<>();
     if (this.addDiscoveredConverters) {
       if (classLoader == null) {
@@ -116,7 +121,7 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
       }
       converters.putAll(ConversionHub.getDiscoveredConverters(classLoader));
     }
-    
+
     synchronized (this.converters) {
       if (!this.converters.isEmpty()) {
         for (final Converter<?> converter : this.converters) {
@@ -138,8 +143,8 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
           }
         }
       }
-    }    
-    
+    }
+
     return new org.microbean.microprofile.config.Config(sources, new ConversionHub(converters));
   }
 
@@ -179,7 +184,7 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
   @Override
   public final ConfigBuilder withSources(final ConfigSource... sources) {
     // The specification says nothing about null arguments.
-    // The specification says nothing about concurrency.    
+    // The specification says nothing about concurrency.
     if (sources != null) {
       synchronized (this.sources) {
         for (final ConfigSource configSource : sources) {

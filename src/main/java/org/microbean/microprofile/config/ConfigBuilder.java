@@ -102,13 +102,17 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
       sources.addAll(org.microbean.microprofile.config.Config.getDiscoveredConfigSources(classLoader));
     }
 
-    if (sources == null) {
-      sources = new LinkedList<>();
-    }
     synchronized (this.sources) {
-      sources.addAll(this.sources);
+      if (!this.sources.isEmpty()) {
+        if (sources == null) {
+          sources = new LinkedList<>();
+        }
+        sources.addAll(this.sources);
+      }
     }
-    Collections.sort(sources, ConfigSourceComparator.INSTANCE);
+    if (sources != null) {
+      Collections.sort(sources, ConfigSourceComparator.INSTANCE);
+    }
 
     final Map<Type, Converter<?>> converters = new HashMap<>();
     if (this.addDiscoveredConverters) {

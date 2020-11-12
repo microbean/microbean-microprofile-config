@@ -668,10 +668,14 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
   }
 
   static final Collection<? extends ConfigSource> getDefaultConfigSources() throws IOException {
+    return getDefaultConfigSources(null);
+  }
+
+  static final Collection<? extends ConfigSource> getDefaultConfigSources(ClassLoader classLoader) throws IOException {
     final Collection<ConfigSource> sources = new LinkedList<>();
     sources.add(new SystemPropertiesConfigSource());
     sources.add(new EnvironmentVariablesConfigSource());
-    final Collection<? extends ConfigSource> microprofileConfigPropertiesConfigSources = getMicroprofileConfigPropertiesSources(null);
+    final Collection<? extends ConfigSource> microprofileConfigPropertiesConfigSources = getMicroprofileConfigPropertiesSources(classLoader);
     if (microprofileConfigPropertiesConfigSources != null && !microprofileConfigPropertiesConfigSources.isEmpty()) {
       sources.addAll(microprofileConfigPropertiesConfigSources);
     }

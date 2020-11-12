@@ -84,7 +84,7 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
       sources = new LinkedList<>();
       Collection<? extends ConfigSource> defaultConfigSources = null;
       try {
-        defaultConfigSources = org.microbean.microprofile.config.Config.getDefaultConfigSources();
+        defaultConfigSources = org.microbean.microprofile.config.Config.getDefaultConfigSources(this.classLoader);
       } catch (final IOException ioException) {
         throw new RuntimeException(ioException.getMessage(), ioException);
       }

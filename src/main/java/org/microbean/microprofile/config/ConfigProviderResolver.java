@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018­2019 microBean™.
+ * Copyright © 2018–2021 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
   private final WeakHashMap<ClassLoader, WeakAutoCloseableReference<ClassLoader, Config>> configMap;
 
   private final ReferenceQueue<? super ClassLoader> autoClosingReferenceQueue;
-  
+
   /**
    * Creates a new {@link ConfigProviderResolver}.
    */
@@ -448,10 +448,11 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
     }
   }
 
+  @SuppressWarnings("try")
   private static final class WeakAutoCloseableReference<R, A> extends WeakReference<R> implements AutoCloseable {
 
     private final A potentialAutoCloseable;
-    
+
     private WeakAutoCloseableReference(final R referent,
                                        final A potentialAutoCloseable,
                                        final ReferenceQueue<? super R> referenceQueue) {
@@ -462,7 +463,7 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
     private final A getPotentialAutoCloseable() {
       return this.potentialAutoCloseable;
     }
-    
+
     @Override
     public final void close() throws Exception {
       final A potentialAutoCloseable = this.getPotentialAutoCloseable();
@@ -470,13 +471,13 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
         ((AutoCloseable)potentialAutoCloseable).close();
       }
     }
-    
+
   }
 
   private static final class AutoCloseableCloserThread extends Thread {
 
     private final ReferenceQueue<?> referenceQueue;
-    
+
     private AutoCloseableCloserThread(final ReferenceQueue<?> referenceQueue) {
       super(AutoCloseableCloserThread.class.getName());
       this.setDaemon(true);
@@ -509,7 +510,7 @@ public final class ConfigProviderResolver extends org.eclipse.microprofile.confi
         }
       }
     }
-    
+
   }
 
 }

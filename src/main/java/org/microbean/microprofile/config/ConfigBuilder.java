@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018­2020 microBean™.
+ * Copyright © 2018–2021 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,11 +80,14 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
   public final Config build() {
     List<ConfigSource> sources = null;
 
+    ClassLoader classLoader = null;
+
     if (this.addDefaultSources) {
+      classLoader = this.classLoader;
       sources = new LinkedList<>();
       Collection<? extends ConfigSource> defaultConfigSources = null;
       try {
-        defaultConfigSources = org.microbean.microprofile.config.Config.getDefaultConfigSources(this.classLoader);
+        defaultConfigSources = org.microbean.microprofile.config.Config.getDefaultConfigSources(classLoader);
       } catch (final IOException ioException) {
         throw new RuntimeException(ioException.getMessage(), ioException);
       }
@@ -92,10 +95,10 @@ class ConfigBuilder implements org.eclipse.microprofile.config.spi.ConfigBuilder
       sources.addAll(defaultConfigSources);
     }
 
-    ClassLoader classLoader = null;
-
     if (this.addDiscoveredSources) {
-      classLoader = this.classLoader;
+      if (classLoader == null) {
+        classLoader = this.classLoader;
+      }
       if (sources == null) {
         sources = new LinkedList<>();
       }

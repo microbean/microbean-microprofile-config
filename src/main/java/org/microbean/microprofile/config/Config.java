@@ -1,6 +1,6 @@
 /* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-
  *
- * Copyright © 2018–2019 microBean™.
+ * Copyright © 2018–2021 microBean™.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -671,7 +671,7 @@ public final class Config implements Closeable, org.eclipse.microprofile.config.
     return getDefaultConfigSources(null);
   }
 
-  static final Collection<? extends ConfigSource> getDefaultConfigSources(ClassLoader classLoader) throws IOException {
+  static final Collection<? extends ConfigSource> getDefaultConfigSources(final ClassLoader classLoader) throws IOException {
     final Collection<ConfigSource> sources = new LinkedList<>();
     sources.add(new SystemPropertiesConfigSource());
     sources.add(new EnvironmentVariablesConfigSource());

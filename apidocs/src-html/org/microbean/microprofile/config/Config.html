@@ -8,7 +8,7 @@
 <div class="sourceContainer">
 <pre><span class="sourceLineNo">001</span>/* -*- mode: Java; c-basic-offset: 2; indent-tabs-mode: nil; coding: utf-8-unix -*-<a name="line.1"></a>
 <span class="sourceLineNo">002</span> *<a name="line.2"></a>
-<span class="sourceLineNo">003</span> * Copyright © 2018–2019 microBean™.<a name="line.3"></a>
+<span class="sourceLineNo">003</span> * Copyright © 2018–2021 microBean™.<a name="line.3"></a>
 <span class="sourceLineNo">004</span> *<a name="line.4"></a>
 <span class="sourceLineNo">005</span> * Licensed under the Apache License, Version 2.0 (the "License");<a name="line.5"></a>
 <span class="sourceLineNo">006</span> * you may not use this file except in compliance with the License.<a name="line.6"></a>
@@ -676,76 +676,80 @@
 <span class="sourceLineNo">668</span>  }<a name="line.668"></a>
 <span class="sourceLineNo">669</span><a name="line.669"></a>
 <span class="sourceLineNo">670</span>  static final Collection&lt;? extends ConfigSource&gt; getDefaultConfigSources() throws IOException {<a name="line.670"></a>
-<span class="sourceLineNo">671</span>    final Collection&lt;ConfigSource&gt; sources = new LinkedList&lt;&gt;();<a name="line.671"></a>
-<span class="sourceLineNo">672</span>    sources.add(new SystemPropertiesConfigSource());<a name="line.672"></a>
-<span class="sourceLineNo">673</span>    sources.add(new EnvironmentVariablesConfigSource());<a name="line.673"></a>
-<span class="sourceLineNo">674</span>    final Collection&lt;? extends ConfigSource&gt; microprofileConfigPropertiesConfigSources = getMicroprofileConfigPropertiesSources(null);<a name="line.674"></a>
-<span class="sourceLineNo">675</span>    if (microprofileConfigPropertiesConfigSources != null &amp;&amp; !microprofileConfigPropertiesConfigSources.isEmpty()) {<a name="line.675"></a>
-<span class="sourceLineNo">676</span>      sources.addAll(microprofileConfigPropertiesConfigSources);<a name="line.676"></a>
-<span class="sourceLineNo">677</span>    }<a name="line.677"></a>
-<span class="sourceLineNo">678</span>    return Collections.unmodifiableCollection(sources);<a name="line.678"></a>
-<span class="sourceLineNo">679</span>  }<a name="line.679"></a>
-<span class="sourceLineNo">680</span><a name="line.680"></a>
-<span class="sourceLineNo">681</span>  static final Collection&lt;? extends ConfigSource&gt; getMicroprofileConfigPropertiesSources(ClassLoader classLoader) throws IOException {<a name="line.681"></a>
-<span class="sourceLineNo">682</span>    if (classLoader == null) {<a name="line.682"></a>
-<span class="sourceLineNo">683</span>      classLoader = AccessController.doPrivileged((PrivilegedAction&lt;ClassLoader&gt;)() -&gt; Thread.currentThread().getContextClassLoader());<a name="line.683"></a>
-<span class="sourceLineNo">684</span>    }<a name="line.684"></a>
-<span class="sourceLineNo">685</span>    final Enumeration&lt;? extends URL&gt; urls = classLoader.getResources("META-INF/microprofile-config.properties");<a name="line.685"></a>
-<span class="sourceLineNo">686</span>    Collection&lt;ConfigSource&gt; returnValue = new ArrayList&lt;&gt;();<a name="line.686"></a>
-<span class="sourceLineNo">687</span>    if (urls != null) {<a name="line.687"></a>
-<span class="sourceLineNo">688</span>      while (urls.hasMoreElements()) {<a name="line.688"></a>
-<span class="sourceLineNo">689</span>        final URL url = urls.nextElement();<a name="line.689"></a>
-<span class="sourceLineNo">690</span>        if (url != null) {<a name="line.690"></a>
-<span class="sourceLineNo">691</span>          final Properties properties = new Properties();<a name="line.691"></a>
-<span class="sourceLineNo">692</span>          // The specification does not mandate a character set for<a name="line.692"></a>
-<span class="sourceLineNo">693</span>          // the /META-INF/microprofile-config.properties, nor whether<a name="line.693"></a>
-<span class="sourceLineNo">694</span>          // it should be in java.util.Properties format.  We'll<a name="line.694"></a>
-<span class="sourceLineNo">695</span>          // assume ISO-8859-1 and java.util.Properties format.<a name="line.695"></a>
-<span class="sourceLineNo">696</span>          try (final Reader reader = new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.ISO_8859_1))) {<a name="line.696"></a>
-<span class="sourceLineNo">697</span>            properties.load(reader);<a name="line.697"></a>
-<span class="sourceLineNo">698</span>          }<a name="line.698"></a>
-<span class="sourceLineNo">699</span>          // The specification provides no guidance on ConfigSource naming.<a name="line.699"></a>
-<span class="sourceLineNo">700</span>          returnValue.add(new PropertiesConfigSource(properties, url.toString()));<a name="line.700"></a>
-<span class="sourceLineNo">701</span>        }<a name="line.701"></a>
-<span class="sourceLineNo">702</span>      }<a name="line.702"></a>
-<span class="sourceLineNo">703</span>    }<a name="line.703"></a>
-<span class="sourceLineNo">704</span>    if (returnValue.isEmpty()) {<a name="line.704"></a>
-<span class="sourceLineNo">705</span>      returnValue = Collections.emptySet();<a name="line.705"></a>
-<span class="sourceLineNo">706</span>    } else {<a name="line.706"></a>
-<span class="sourceLineNo">707</span>      returnValue = Collections.unmodifiableCollection(returnValue);<a name="line.707"></a>
-<span class="sourceLineNo">708</span>    }<a name="line.708"></a>
-<span class="sourceLineNo">709</span>    return returnValue;<a name="line.709"></a>
-<span class="sourceLineNo">710</span>  }<a name="line.710"></a>
-<span class="sourceLineNo">711</span><a name="line.711"></a>
-<span class="sourceLineNo">712</span>  static final Collection&lt;? extends ConfigSource&gt; getDiscoveredConfigSources(ClassLoader classLoader) {<a name="line.712"></a>
-<span class="sourceLineNo">713</span>    if (classLoader == null) {<a name="line.713"></a>
-<span class="sourceLineNo">714</span>      classLoader = AccessController.doPrivileged((PrivilegedAction&lt;ClassLoader&gt;)() -&gt; Thread.currentThread().getContextClassLoader());<a name="line.714"></a>
-<span class="sourceLineNo">715</span>    }<a name="line.715"></a>
-<span class="sourceLineNo">716</span>    final ServiceLoader&lt;ConfigSource&gt; discoveredSources = ServiceLoader.load(ConfigSource.class, classLoader);<a name="line.716"></a>
-<span class="sourceLineNo">717</span>    assert discoveredSources != null;<a name="line.717"></a>
-<span class="sourceLineNo">718</span>    final Collection&lt;ConfigSource&gt; sources = new LinkedList&lt;&gt;();<a name="line.718"></a>
-<span class="sourceLineNo">719</span>    for (final ConfigSource source : discoveredSources) {<a name="line.719"></a>
-<span class="sourceLineNo">720</span>      if (source != null) {<a name="line.720"></a>
-<span class="sourceLineNo">721</span>        sources.add(source);<a name="line.721"></a>
-<span class="sourceLineNo">722</span>      }<a name="line.722"></a>
-<span class="sourceLineNo">723</span>    }<a name="line.723"></a>
-<span class="sourceLineNo">724</span>    final ServiceLoader&lt;ConfigSourceProvider&gt; discoveredConfigSourceProviders = ServiceLoader.load(ConfigSourceProvider.class, classLoader);<a name="line.724"></a>
-<span class="sourceLineNo">725</span>    assert discoveredConfigSourceProviders != null;<a name="line.725"></a>
-<span class="sourceLineNo">726</span>    for (final ConfigSourceProvider provider : discoveredConfigSourceProviders) {<a name="line.726"></a>
-<span class="sourceLineNo">727</span>      if (provider != null) {<a name="line.727"></a>
-<span class="sourceLineNo">728</span>        final Iterable&lt;? extends ConfigSource&gt; configSources = provider.getConfigSources(classLoader);<a name="line.728"></a>
-<span class="sourceLineNo">729</span>        if (configSources != null) {<a name="line.729"></a>
-<span class="sourceLineNo">730</span>          for (final ConfigSource configSource : configSources) {<a name="line.730"></a>
-<span class="sourceLineNo">731</span>            if (configSource != null) {<a name="line.731"></a>
-<span class="sourceLineNo">732</span>              sources.add(configSource);<a name="line.732"></a>
-<span class="sourceLineNo">733</span>            }<a name="line.733"></a>
-<span class="sourceLineNo">734</span>          }<a name="line.734"></a>
-<span class="sourceLineNo">735</span>        }<a name="line.735"></a>
-<span class="sourceLineNo">736</span>      }<a name="line.736"></a>
-<span class="sourceLineNo">737</span>    }<a name="line.737"></a>
-<span class="sourceLineNo">738</span>    return Collections.unmodifiableCollection(sources);<a name="line.738"></a>
-<span class="sourceLineNo">739</span>  }<a name="line.739"></a>
-<span class="sourceLineNo">740</span>}<a name="line.740"></a>
+<span class="sourceLineNo">671</span>    return getDefaultConfigSources(null);<a name="line.671"></a>
+<span class="sourceLineNo">672</span>  }<a name="line.672"></a>
+<span class="sourceLineNo">673</span><a name="line.673"></a>
+<span class="sourceLineNo">674</span>  static final Collection&lt;? extends ConfigSource&gt; getDefaultConfigSources(final ClassLoader classLoader) throws IOException {<a name="line.674"></a>
+<span class="sourceLineNo">675</span>    final Collection&lt;ConfigSource&gt; sources = new LinkedList&lt;&gt;();<a name="line.675"></a>
+<span class="sourceLineNo">676</span>    sources.add(new SystemPropertiesConfigSource());<a name="line.676"></a>
+<span class="sourceLineNo">677</span>    sources.add(new EnvironmentVariablesConfigSource());<a name="line.677"></a>
+<span class="sourceLineNo">678</span>    final Collection&lt;? extends ConfigSource&gt; microprofileConfigPropertiesConfigSources = getMicroprofileConfigPropertiesSources(classLoader);<a name="line.678"></a>
+<span class="sourceLineNo">679</span>    if (microprofileConfigPropertiesConfigSources != null &amp;&amp; !microprofileConfigPropertiesConfigSources.isEmpty()) {<a name="line.679"></a>
+<span class="sourceLineNo">680</span>      sources.addAll(microprofileConfigPropertiesConfigSources);<a name="line.680"></a>
+<span class="sourceLineNo">681</span>    }<a name="line.681"></a>
+<span class="sourceLineNo">682</span>    return Collections.unmodifiableCollection(sources);<a name="line.682"></a>
+<span class="sourceLineNo">683</span>  }<a name="line.683"></a>
+<span class="sourceLineNo">684</span><a name="line.684"></a>
+<span class="sourceLineNo">685</span>  static final Collection&lt;? extends ConfigSource&gt; getMicroprofileConfigPropertiesSources(ClassLoader classLoader) throws IOException {<a name="line.685"></a>
+<span class="sourceLineNo">686</span>    if (classLoader == null) {<a name="line.686"></a>
+<span class="sourceLineNo">687</span>      classLoader = AccessController.doPrivileged((PrivilegedAction&lt;ClassLoader&gt;)() -&gt; Thread.currentThread().getContextClassLoader());<a name="line.687"></a>
+<span class="sourceLineNo">688</span>    }<a name="line.688"></a>
+<span class="sourceLineNo">689</span>    final Enumeration&lt;? extends URL&gt; urls = classLoader.getResources("META-INF/microprofile-config.properties");<a name="line.689"></a>
+<span class="sourceLineNo">690</span>    Collection&lt;ConfigSource&gt; returnValue = new ArrayList&lt;&gt;();<a name="line.690"></a>
+<span class="sourceLineNo">691</span>    if (urls != null) {<a name="line.691"></a>
+<span class="sourceLineNo">692</span>      while (urls.hasMoreElements()) {<a name="line.692"></a>
+<span class="sourceLineNo">693</span>        final URL url = urls.nextElement();<a name="line.693"></a>
+<span class="sourceLineNo">694</span>        if (url != null) {<a name="line.694"></a>
+<span class="sourceLineNo">695</span>          final Properties properties = new Properties();<a name="line.695"></a>
+<span class="sourceLineNo">696</span>          // The specification does not mandate a character set for<a name="line.696"></a>
+<span class="sourceLineNo">697</span>          // the /META-INF/microprofile-config.properties, nor whether<a name="line.697"></a>
+<span class="sourceLineNo">698</span>          // it should be in java.util.Properties format.  We'll<a name="line.698"></a>
+<span class="sourceLineNo">699</span>          // assume ISO-8859-1 and java.util.Properties format.<a name="line.699"></a>
+<span class="sourceLineNo">700</span>          try (final Reader reader = new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.ISO_8859_1))) {<a name="line.700"></a>
+<span class="sourceLineNo">701</span>            properties.load(reader);<a name="line.701"></a>
+<span class="sourceLineNo">702</span>          }<a name="line.702"></a>
+<span class="sourceLineNo">703</span>          // The specification provides no guidance on ConfigSource naming.<a name="line.703"></a>
+<span class="sourceLineNo">704</span>          returnValue.add(new PropertiesConfigSource(properties, url.toString()));<a name="line.704"></a>
+<span class="sourceLineNo">705</span>        }<a name="line.705"></a>
+<span class="sourceLineNo">706</span>      }<a name="line.706"></a>
+<span class="sourceLineNo">707</span>    }<a name="line.707"></a>
+<span class="sourceLineNo">708</span>    if (returnValue.isEmpty()) {<a name="line.708"></a>
+<span class="sourceLineNo">709</span>      returnValue = Collections.emptySet();<a name="line.709"></a>
+<span class="sourceLineNo">710</span>    } else {<a name="line.710"></a>
+<span class="sourceLineNo">711</span>      returnValue = Collections.unmodifiableCollection(returnValue);<a name="line.711"></a>
+<span class="sourceLineNo">712</span>    }<a name="line.712"></a>
+<span class="sourceLineNo">713</span>    return returnValue;<a name="line.713"></a>
+<span class="sourceLineNo">714</span>  }<a name="line.714"></a>
+<span class="sourceLineNo">715</span><a name="line.715"></a>
+<span class="sourceLineNo">716</span>  static final Collection&lt;? extends ConfigSource&gt; getDiscoveredConfigSources(ClassLoader classLoader) {<a name="line.716"></a>
+<span class="sourceLineNo">717</span>    if (classLoader == null) {<a name="line.717"></a>
+<span class="sourceLineNo">718</span>      classLoader = AccessController.doPrivileged((PrivilegedAction&lt;ClassLoader&gt;)() -&gt; Thread.currentThread().getContextClassLoader());<a name="line.718"></a>
+<span class="sourceLineNo">719</span>    }<a name="line.719"></a>
+<span class="sourceLineNo">720</span>    final ServiceLoader&lt;ConfigSource&gt; discoveredSources = ServiceLoader.load(ConfigSource.class, classLoader);<a name="line.720"></a>
+<span class="sourceLineNo">721</span>    assert discoveredSources != null;<a name="line.721"></a>
+<span class="sourceLineNo">722</span>    final Collection&lt;ConfigSource&gt; sources = new LinkedList&lt;&gt;();<a name="line.722"></a>
+<span class="sourceLineNo">723</span>    for (final ConfigSource source : discoveredSources) {<a name="line.723"></a>
+<span class="sourceLineNo">724</span>      if (source != null) {<a name="line.724"></a>
+<span class="sourceLineNo">725</span>        sources.add(source);<a name="line.725"></a>
+<span class="sourceLineNo">726</span>      }<a name="line.726"></a>
+<span class="sourceLineNo">727</span>    }<a name="line.727"></a>
+<span class="sourceLineNo">728</span>    final ServiceLoader&lt;ConfigSourceProvider&gt; discoveredConfigSourceProviders = ServiceLoader.load(ConfigSourceProvider.class, classLoader);<a name="line.728"></a>
+<span class="sourceLineNo">729</span>    assert discoveredConfigSourceProviders != null;<a name="line.729"></a>
+<span class="sourceLineNo">730</span>    for (final ConfigSourceProvider provider : discoveredConfigSourceProviders) {<a name="line.730"></a>
+<span class="sourceLineNo">731</span>      if (provider != null) {<a name="line.731"></a>
+<span class="sourceLineNo">732</span>        final Iterable&lt;? extends ConfigSource&gt; configSources = provider.getConfigSources(classLoader);<a name="line.732"></a>
+<span class="sourceLineNo">733</span>        if (configSources != null) {<a name="line.733"></a>
+<span class="sourceLineNo">734</span>          for (final ConfigSource configSource : configSources) {<a name="line.734"></a>
+<span class="sourceLineNo">735</span>            if (configSource != null) {<a name="line.735"></a>
+<span class="sourceLineNo">736</span>              sources.add(configSource);<a name="line.736"></a>
+<span class="sourceLineNo">737</span>            }<a name="line.737"></a>
+<span class="sourceLineNo">738</span>          }<a name="line.738"></a>
+<span class="sourceLineNo">739</span>        }<a name="line.739"></a>
+<span class="sourceLineNo">740</span>      }<a name="line.740"></a>
+<span class="sourceLineNo">741</span>    }<a name="line.741"></a>
+<span class="sourceLineNo">742</span>    return Collections.unmodifiableCollection(sources);<a name="line.742"></a>
+<span class="sourceLineNo">743</span>  }<a name="line.743"></a>
+<span class="sourceLineNo">744</span>}<a name="line.744"></a>
 
 
 
